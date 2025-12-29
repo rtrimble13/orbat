@@ -486,7 +486,8 @@ TEST(MatrixTest, IsPositiveDefiniteNegativeDiagonal) {
 
 TEST(MatrixTest, IsPositiveDefiniteSingularMatrix) {
     // Singular matrix (rank-deficient) is not positive-definite
-    Matrix m({{1.0, 1.0}, {1.0, 1.0}});
+    // Different rows, but linearly dependent
+    Matrix m({{2.0, 4.0}, {1.0, 2.0}});
     EXPECT_FALSE(m.isPositiveDefinite());
 }
 
