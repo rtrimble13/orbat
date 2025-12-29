@@ -75,7 +75,8 @@ int main() {
         if (result.success()) {
             std::cout << "   " << std::setw(13) << target * 100 << "%" << std::setw(10)
                       << result.expectedReturn * 100 << "%" << std::setw(8) << result.risk * 100
-                      << "%" << "    " << std::setw(5) << static_cast<int>(result.weights[0] * 100)
+                      << "%"
+                      << "    " << std::setw(5) << static_cast<int>(result.weights[0] * 100)
                       << "% / " << std::setw(3) << static_cast<int>(result.weights[1] * 100)
                       << "% / " << std::setw(3) << static_cast<int>(result.weights[2] * 100) << "%"
                       << std::endl;
