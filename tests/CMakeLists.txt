@@ -60,3 +60,13 @@ target_link_libraries(test_covariance_matrix
         GTest::gtest_main
 )
 gtest_discover_tests(test_covariance_matrix)
+
+add_executable(test_constraint
+    unit/test_constraint.cpp
+)
+target_link_libraries(test_constraint
+    PRIVATE
+        orbat
+        GTest::gtest_main
+)
+gtest_discover_tests(test_constraint)
