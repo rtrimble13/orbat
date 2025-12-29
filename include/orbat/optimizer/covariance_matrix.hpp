@@ -49,6 +49,21 @@ public:
     explicit CovarianceMatrix(core::Matrix&& matrix) : matrix_(std::move(matrix)) { validate(); }
 
     /**
+     * @brief Construct from a matrix with labels.
+     * @param matrix Covariance matrix
+     * @param labels Vector of asset labels
+     * @throws std::invalid_argument if matrix is not square, symmetric, positive-definite, or sizes
+     * don't match
+     */
+    CovarianceMatrix(const core::Matrix& matrix, const std::vector<std::string>& labels)
+        : matrix_(matrix), labels_(labels) {
+        if (!labels.empty() && labels.size() != matrix.rows()) {
+            throw std::invalid_argument("Labels size must match matrix dimension or be empty");
+        }
+        validate();
+    }
+
+    /**
      * @brief Construct from initializer list.
      * @param matrix Initializer list representing matrix rows
      * @throws std::invalid_argument if matrix is not square, symmetric, or positive-definite
@@ -97,6 +112,45 @@ public:
      * @return Reference to covariance value
      */
     double& operator()(size_t i, size_t j) { return matrix_(i, j); }
+
+    /**
+     * @brief Get asset labels.
+     * @return Const reference to labels vector (empty if no labels)
+     */
+    const std::vector<std::string>& labels() const { return labels_; }
+
+    /**
+     * @brief Set asset labels.
+     * @param labels Vector of asset labels
+     * @throws std::invalid_argument if labels size doesn't match matrix dimension
+     */
+    void setLabels(const std::vector<std::string>& labels) {
+        if (!labels.empty() && labels.size() != matrix_.rows()) {
+            throw std::invalid_argument("Labels size must match matrix dimension or be empty");
+        }
+        labels_ = labels;
+    }
+
+    /**
+     * @brief Check if asset has a label.
+     * @param index Asset index
+     * @return true if asset has a label, false otherwise
+     */
+    bool hasLabel(size_t index) const {
+        return !labels_.empty() && index < labels_.size() && !labels_[index].empty();
+    }
+
+    /**
+     * @brief Get asset label.
+     * @param index Asset index
+     * @return Asset label or default label if not set
+     */
+    std::string getLabel(size_t index) const {
+        if (hasLabel(index)) {
+            return labels_[index];
+        }
+        return "Asset " + std::to_string(index);
+    }
 
     /**
      * @brief Load covariance matrix from CSV file.
@@ -189,10 +243,11 @@ public:
     /**
      * @brief Load covariance matrix from JSON file.
      *
-     * JSON format should be a 2D array:
-     *   [[0.04, 0.01, 0.005],
-     *    [0.01, 0.0225, 0.008],
-     *    [0.005, 0.008, 0.01]]
+     * JSON format can be:
+     * 1. Simple 2D array: [[0.04, 0.01], [0.01, 0.0225]]
+     * 2. Object with covariance: {"covariance": [[0.04, 0.01], [0.01, 0.0225]]}
+     * 3. Object with covariance and labels: {"covariance": [[0.04, 0.01], [0.01, 0.0225]],
+     * "labels": ["Stock A", "Stock B"]}
      *
      * @param filename Path to JSON file
      * @return CovarianceMatrix object
@@ -214,7 +269,11 @@ public:
     /**
      * @brief Parse covariance matrix from JSON string.
      *
-     * Supports same formats as fromJSON().
+     * Supports multiple formats:
+     * 1. Simple 2D array: [[0.04, 0.01], [0.01, 0.0225]]
+     * 2. Object with covariance: {"covariance": [[0.04, 0.01], [0.01, 0.0225]]}
+     * 3. Object with covariance and labels: {"covariance": [[...]], "labels": ["Stock A", "Stock
+     * B"]}
      *
      * @param json_str JSON string
      * @return CovarianceMatrix object
@@ -222,84 +281,20 @@ public:
      * @throws std::invalid_argument if data is invalid or not square/symmetric
      */
     static CovarianceMatrix fromJSONString(const std::string& json_str) {
-        // Simple JSON parser for 2D array format
+        std::vector<std::vector<double>> rows;
+        std::vector<std::string> labels;
+
         std::string trimmed = trim(json_str);
 
-        // Look for array start
-        size_t array_start = trimmed.find('[');
-        if (array_start == std::string::npos) {
-            throw std::runtime_error("Invalid JSON: expected array");
-        }
-
-        // Find the outer array bounds
-        size_t outer_end = trimmed.rfind(']');
-        if (outer_end == std::string::npos) {
-            throw std::runtime_error("Invalid JSON: unclosed array");
-        }
-
-        // Parse rows
-        std::vector<std::vector<double>> rows;
-        size_t pos = array_start + 1;
-
-        while (pos < outer_end) {
-            // Skip whitespace
-            while (pos < outer_end && std::isspace(trimmed[pos])) {
-                ++pos;
-            }
-
-            if (pos >= outer_end) {
-                break;
-            }
-
-            // Look for inner array
-            if (trimmed[pos] == '[') {
-                size_t row_start = pos;
-                size_t row_end = trimmed.find(']', row_start);
-                if (row_end == std::string::npos || row_end > outer_end) {
-                    throw std::runtime_error("Invalid JSON: unclosed inner array");
-                }
-
-                // Extract row content
-                std::string row_content = trimmed.substr(row_start + 1, row_end - row_start - 1);
-
-                // Parse values in row
-                std::vector<double> row;
-                std::istringstream iss(row_content);
-                std::string token;
-
-                while (std::getline(iss, token, ',')) {
-                    token = trim(token);
-                    if (token.empty()) {
-                        continue;
-                    }
-
-                    try {
-                        double value = std::stod(token);
-                        row.push_back(value);
-                    } catch (const std::exception& e) {
-                        throw std::runtime_error("Invalid numeric value in JSON: " + token);
-                    }
-                }
-
-                if (!row.empty()) {
-                    rows.push_back(row);
-                }
-
-                pos = row_end + 1;
-
-                // Skip comma if present
-                while (pos < outer_end && (std::isspace(trimmed[pos]) || trimmed[pos] == ',')) {
-                    ++pos;
-                }
-            } else if (trimmed[pos] == ',') {
-                ++pos;
-            } else if (!std::isspace(trimmed[pos])) {
-                // Unexpected non-whitespace character
-                throw std::runtime_error(std::string("Invalid JSON: unexpected character '") +
-                                         trimmed[pos] + "' at position " + std::to_string(pos));
-            } else {
-                ++pos;
-            }
+        // Check if it's an object or array
+        if (trimmed[0] == '{') {
+            // Object format: {"covariance": [[...]], "labels": [...]}
+            parseJSONObject(trimmed, rows, labels);
+        } else if (trimmed[0] == '[') {
+            // Simple 2D array format
+            parse2DArray(trimmed, rows);
+        } else {
+            throw std::runtime_error("Invalid JSON: expected object or array");
         }
 
         if (rows.empty()) {
@@ -325,7 +320,11 @@ public:
             }
         }
 
-        return CovarianceMatrix(std::move(matrix));
+        if (labels.empty()) {
+            return CovarianceMatrix(std::move(matrix));
+        } else {
+            return CovarianceMatrix(std::move(matrix), labels);
+        }
     }
 
     /**
@@ -392,6 +391,213 @@ public:
 
 private:
     core::Matrix matrix_;
+    std::vector<std::string> labels_;
+
+    /**
+     * @brief Parse 2D JSON array format: [[0.04, 0.01], [0.01, 0.0225]]
+     */
+    static void parse2DArray(const std::string& json_str, std::vector<std::vector<double>>& rows) {
+        std::string trimmed = trim(json_str);
+
+        // Look for array start
+        size_t array_start = trimmed.find('[');
+        if (array_start == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected array");
+        }
+
+        // Find the outer array bounds
+        size_t outer_end = trimmed.rfind(']');
+        if (outer_end == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: unclosed array");
+        }
+
+        // Parse rows
+        size_t pos = array_start + 1;
+
+        while (pos < outer_end) {
+            // Skip whitespace
+            while (pos < outer_end && std::isspace(trimmed[pos])) {
+                ++pos;
+            }
+
+            if (pos >= outer_end) {
+                break;
+            }
+
+            // Look for inner array
+            if (trimmed[pos] == '[') {
+                size_t row_start = pos;
+                size_t row_end = trimmed.find(']', row_start);
+                if (row_end == std::string::npos || row_end > outer_end) {
+                    throw std::runtime_error("Invalid JSON: unclosed inner array");
+                }
+
+                // Extract row content
+                std::string row_content = trimmed.substr(row_start + 1, row_end - row_start - 1);
+
+                // Parse values in row
+                std::vector<double> row;
+                std::istringstream iss(row_content);
+                std::string token;
+
+                while (std::getline(iss, token, ',')) {
+                    token = trim(token);
+                    if (token.empty()) {
+                        continue;
+                    }
+
+                    try {
+                        double value = std::stod(token);
+                        row.push_back(value);
+                    } catch (const std::exception&) {
+                        throw std::runtime_error("Invalid numeric value in JSON: " + token);
+                    }
+                }
+
+                if (!row.empty()) {
+                    rows.push_back(row);
+                }
+
+                pos = row_end + 1;
+
+                // Skip comma if present
+                while (pos < outer_end && (std::isspace(trimmed[pos]) || trimmed[pos] == ',')) {
+                    ++pos;
+                }
+            } else if (trimmed[pos] == ',') {
+                ++pos;
+            } else if (!std::isspace(trimmed[pos])) {
+                // Unexpected non-whitespace character
+                throw std::runtime_error(std::string("Invalid JSON: unexpected character '") +
+                                         trimmed[pos] + "' at position " + std::to_string(pos));
+            } else {
+                ++pos;
+            }
+        }
+    }
+
+    /**
+     * @brief Parse JSON string array: ["Stock A", "Stock B"]
+     */
+    static void parseJSONStringArray(const std::string& json_str,
+                                     std::vector<std::string>& labels) {
+        std::string trimmed = trim(json_str);
+
+        size_t array_start = trimmed.find('[');
+        if (array_start == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected array");
+        }
+
+        size_t array_end = trimmed.find(']', array_start);
+        if (array_end == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: unclosed array");
+        }
+
+        std::string array_content = trimmed.substr(array_start + 1, array_end - array_start - 1);
+
+        // Parse string values
+        size_t pos = 0;
+        while (pos < array_content.length()) {
+            // Skip whitespace
+            while (pos < array_content.length() && std::isspace(array_content[pos])) {
+                ++pos;
+            }
+
+            if (pos >= array_content.length()) {
+                break;
+            }
+
+            // Look for string start
+            if (array_content[pos] == '"') {
+                ++pos;
+                size_t string_end = array_content.find('"', pos);
+                if (string_end == std::string::npos) {
+                    throw std::runtime_error("Invalid JSON: unclosed string");
+                }
+                labels.push_back(array_content.substr(pos, string_end - pos));
+                pos = string_end + 1;
+
+                // Skip to next comma or end
+                while (pos < array_content.length() &&
+                       (std::isspace(array_content[pos]) || array_content[pos] == ',')) {
+                    ++pos;
+                }
+            } else {
+                ++pos;
+            }
+        }
+    }
+
+    /**
+     * @brief Parse JSON object format: {"covariance": [[...]], "labels": [...]}
+     */
+    static void parseJSONObject(const std::string& json_str, std::vector<std::vector<double>>& rows,
+                                std::vector<std::string>& labels) {
+        std::string trimmed = trim(json_str);
+
+        // Find "covariance" field
+        size_t cov_pos = trimmed.find("\"covariance\"");
+        if (cov_pos == std::string::npos) {
+            cov_pos = trimmed.find("'covariance'");
+        }
+        if (cov_pos == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: 'covariance' field not found");
+        }
+
+        // Find the array after "covariance"
+        size_t colon_pos = trimmed.find(':', cov_pos);
+        if (colon_pos == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected ':' after 'covariance'");
+        }
+
+        size_t array_start = trimmed.find('[', colon_pos);
+        if (array_start == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected array for 'covariance'");
+        }
+
+        // Find matching closing bracket for the 2D array
+        int bracket_count = 0;
+        size_t array_end = array_start;
+        for (size_t i = array_start; i < trimmed.length(); ++i) {
+            if (trimmed[i] == '[') {
+                bracket_count++;
+            } else if (trimmed[i] == ']') {
+                bracket_count--;
+                if (bracket_count == 0) {
+                    array_end = i;
+                    break;
+                }
+            }
+        }
+
+        if (bracket_count != 0) {
+            throw std::runtime_error("Invalid JSON: unclosed array for 'covariance'");
+        }
+
+        std::string cov_array = trimmed.substr(array_start, array_end - array_start + 1);
+        parse2DArray(cov_array, rows);
+
+        // Try to find "labels" field (optional)
+        size_t labels_pos = trimmed.find("\"labels\"");
+        if (labels_pos == std::string::npos) {
+            labels_pos = trimmed.find("'labels'");
+        }
+
+        if (labels_pos != std::string::npos) {
+            size_t labels_colon = trimmed.find(':', labels_pos);
+            if (labels_colon != std::string::npos) {
+                size_t labels_array_start = trimmed.find('[', labels_colon);
+                if (labels_array_start != std::string::npos) {
+                    size_t labels_array_end = trimmed.find(']', labels_array_start);
+                    if (labels_array_end != std::string::npos) {
+                        std::string labels_array = trimmed.substr(
+                            labels_array_start, labels_array_end - labels_array_start + 1);
+                        parseJSONStringArray(labels_array, labels);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * @brief Trim whitespace from string.

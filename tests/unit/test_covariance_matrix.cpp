@@ -274,3 +274,65 @@ TEST(CovarianceMatrixTest, NegativeCorrelation) {
     EXPECT_NEAR(cov(0, 1), cov12, 1e-10);
     EXPECT_NEAR(cov(1, 0), cov12, 1e-10);
 }
+
+// Test asset labels
+TEST(CovarianceMatrixTest, ConstructWithLabels) {
+    Matrix m({{0.04, 0.01}, {0.01, 0.0225}});
+    std::vector<std::string> labels = {"Stock A", "Stock B"};
+    CovarianceMatrix cov(m, labels);
+
+    EXPECT_EQ(cov.size(), 2);
+    EXPECT_EQ(cov.labels().size(), 2);
+    EXPECT_EQ(cov.labels()[0], "Stock A");
+    EXPECT_EQ(cov.labels()[1], "Stock B");
+}
+
+TEST(CovarianceMatrixTest, LabelsAccessors) {
+    CovarianceMatrix cov({{0.04, 0.01}, {0.01, 0.0225}});
+
+    EXPECT_TRUE(cov.labels().empty());
+    EXPECT_FALSE(cov.hasLabel(0));
+    EXPECT_EQ(cov.getLabel(0), "Asset 0");
+
+    std::vector<std::string> labels = {"Stock A", "Stock B"};
+    cov.setLabels(labels);
+
+    EXPECT_TRUE(cov.hasLabel(0));
+    EXPECT_EQ(cov.getLabel(0), "Stock A");
+}
+
+TEST(CovarianceMatrixTest, LabelsSizeMismatch) {
+    Matrix m({{0.04, 0.01, 0.005}, {0.01, 0.0225, 0.008}, {0.005, 0.008, 0.01}});
+    std::vector<std::string> labels = {"Stock A", "Stock B"};
+
+    EXPECT_THROW({ CovarianceMatrix cov(m, labels); }, std::invalid_argument);
+}
+
+TEST(CovarianceMatrixTest, LoadFromJSONObject) {
+    CovarianceMatrix cov = CovarianceMatrix::fromJSON("data/covariance_object.json");
+    EXPECT_EQ(cov.size(), 3);
+    EXPECT_DOUBLE_EQ(cov(0, 0), 0.04);
+}
+
+TEST(CovarianceMatrixTest, LoadFromJSONWithLabels) {
+    CovarianceMatrix cov = CovarianceMatrix::fromJSON("data/covariance_with_labels.json");
+    EXPECT_EQ(cov.size(), 3);
+    EXPECT_EQ(cov.labels().size(), 3);
+    EXPECT_EQ(cov.labels()[0], "Stock A");
+}
+
+TEST(CovarianceMatrixTest, LoadFromJSONStringObject) {
+    std::string json = R"({"covariance": [[0.04, 0.01], [0.01, 0.0225]]})";
+    CovarianceMatrix cov = CovarianceMatrix::fromJSONString(json);
+    EXPECT_EQ(cov.size(), 2);
+    EXPECT_DOUBLE_EQ(cov(0, 0), 0.04);
+}
+
+TEST(CovarianceMatrixTest, LoadFromJSONStringWithLabels) {
+    std::string json =
+        R"({"covariance": [[0.04, 0.01], [0.01, 0.0225]], "labels": ["Stock A", "Stock B"]})";
+    CovarianceMatrix cov = CovarianceMatrix::fromJSONString(json);
+    EXPECT_EQ(cov.size(), 2);
+    EXPECT_EQ(cov.labels().size(), 2);
+    EXPECT_EQ(cov.labels()[0], "Stock A");
+}

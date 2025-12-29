@@ -47,6 +47,20 @@ public:
     explicit ExpectedReturns(core::Vector&& returns) : returns_(std::move(returns)) { validate(); }
 
     /**
+     * @brief Construct from a vector of returns with labels.
+     * @param returns Vector of expected returns
+     * @param labels Vector of asset labels
+     * @throws std::invalid_argument if returns vector is empty or sizes don't match
+     */
+    ExpectedReturns(const core::Vector& returns, const std::vector<std::string>& labels)
+        : returns_(returns), labels_(labels) {
+        if (!labels.empty() && labels.size() != returns.size()) {
+            throw std::invalid_argument("Labels size must match returns size or be empty");
+        }
+        validate();
+    }
+
+    /**
      * @brief Construct from initializer list.
      * @param returns Initializer list of returns
      * @throws std::invalid_argument if returns list is empty
@@ -90,6 +104,45 @@ public:
      * @return Reference to expected return value
      */
     double& operator[](size_t index) { return returns_[index]; }
+
+    /**
+     * @brief Get asset labels.
+     * @return Const reference to labels vector (empty if no labels)
+     */
+    const std::vector<std::string>& labels() const { return labels_; }
+
+    /**
+     * @brief Set asset labels.
+     * @param labels Vector of asset labels
+     * @throws std::invalid_argument if labels size doesn't match returns size
+     */
+    void setLabels(const std::vector<std::string>& labels) {
+        if (!labels.empty() && labels.size() != returns_.size()) {
+            throw std::invalid_argument("Labels size must match returns size or be empty");
+        }
+        labels_ = labels;
+    }
+
+    /**
+     * @brief Check if asset has a label.
+     * @param index Asset index
+     * @return true if asset has a label, false otherwise
+     */
+    bool hasLabel(size_t index) const {
+        return !labels_.empty() && index < labels_.size() && !labels_[index].empty();
+    }
+
+    /**
+     * @brief Get asset label.
+     * @param index Asset index
+     * @return Asset label or default label if not set
+     */
+    std::string getLabel(size_t index) const {
+        if (hasLabel(index)) {
+            return labels_[index];
+        }
+        return "Asset " + std::to_string(index);
+    }
 
     /**
      * @brief Load expected returns from CSV file.
@@ -171,8 +224,11 @@ public:
     /**
      * @brief Load expected returns from JSON file.
      *
-     * JSON format should be an array of numbers:
-     *   [0.08, 0.12, 0.10]
+     * JSON format can be:
+     * 1. Simple array: [0.08, 0.12, 0.10]
+     * 2. Object with returns: {"returns": [0.08, 0.12, 0.10]}
+     * 3. Object with returns and labels: {"returns": [0.08, 0.12], "labels": ["Stock A", "Stock
+     * B"]}
      *
      * @param filename Path to JSON file
      * @return ExpectedReturns object
@@ -194,7 +250,11 @@ public:
     /**
      * @brief Parse expected returns from JSON string.
      *
-     * Supports same formats as fromJSON().
+     * Supports multiple formats:
+     * 1. Simple array: [0.08, 0.12, 0.10]
+     * 2. Object with returns: {"returns": [0.08, 0.12, 0.10]}
+     * 3. Object with returns and labels: {"returns": [0.08, 0.12], "labels": ["Stock A", "Stock
+     * B"]}
      *
      * @param json_str JSON string
      * @return ExpectedReturns object
@@ -203,9 +263,61 @@ public:
      */
     static ExpectedReturns fromJSONString(const std::string& json_str) {
         std::vector<double> returns;
+        std::vector<std::string> labels;
 
-        // Simple JSON parser for array format: [0.08, 0.12, 0.10]
-        // This is a minimal implementation without external dependencies
+        std::string trimmed = trim(json_str);
+
+        // Check if it's an object or array
+        if (trimmed[0] == '{') {
+            // Object format: {"returns": [...], "labels": [...]}
+            parseJSONObject(trimmed, returns, labels);
+        } else if (trimmed[0] == '[') {
+            // Simple array format: [0.08, 0.12, 0.10]
+            parseJSONArray(trimmed, returns);
+        } else {
+            throw std::runtime_error("Invalid JSON: expected object or array");
+        }
+
+        if (returns.empty()) {
+            throw std::runtime_error("No valid data found in JSON");
+        }
+
+        if (labels.empty()) {
+            return ExpectedReturns(core::Vector(returns));
+        } else {
+            return ExpectedReturns(core::Vector(returns), labels);
+        }
+    }
+
+    /**
+     * @brief Validate the expected returns data.
+     *
+     * Checks:
+     * - Data is not empty
+     * - All values are finite (no NaN or infinity)
+     *
+     * @throws std::invalid_argument if validation fails
+     */
+    void validate() const {
+        if (returns_.empty()) {
+            throw std::invalid_argument("Expected returns cannot be empty");
+        }
+
+        for (size_t i = 0; i < returns_.size(); ++i) {
+            if (!std::isfinite(returns_[i])) {
+                throw std::invalid_argument("Expected returns must be finite (no NaN or infinity)");
+            }
+        }
+    }
+
+private:
+    core::Vector returns_;
+    std::vector<std::string> labels_;
+
+    /**
+     * @brief Parse JSON array format: [0.08, 0.12, 0.10]
+     */
+    static void parseJSONArray(const std::string& json_str, std::vector<double>& returns) {
         std::string trimmed = trim(json_str);
 
         // Look for array start
@@ -235,41 +347,120 @@ public:
             try {
                 double value = std::stod(token);
                 returns.push_back(value);
-            } catch (const std::exception& e) {
+            } catch (const std::exception&) {
                 throw std::runtime_error("Invalid numeric value in JSON: " + token);
             }
         }
-
-        if (returns.empty()) {
-            throw std::runtime_error("No valid data found in JSON");
-        }
-
-        return ExpectedReturns(core::Vector(returns));
     }
 
     /**
-     * @brief Validate the expected returns data.
-     *
-     * Checks:
-     * - Data is not empty
-     * - All values are finite (no NaN or infinity)
-     *
-     * @throws std::invalid_argument if validation fails
+     * @brief Parse JSON string array: ["Stock A", "Stock B"]
      */
-    void validate() const {
-        if (returns_.empty()) {
-            throw std::invalid_argument("Expected returns cannot be empty");
+    static void parseJSONStringArray(const std::string& json_str,
+                                     std::vector<std::string>& labels) {
+        std::string trimmed = trim(json_str);
+
+        size_t array_start = trimmed.find('[');
+        if (array_start == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected array");
         }
 
-        for (size_t i = 0; i < returns_.size(); ++i) {
-            if (!std::isfinite(returns_[i])) {
-                throw std::invalid_argument("Expected returns must be finite (no NaN or infinity)");
+        size_t array_end = trimmed.find(']', array_start);
+        if (array_end == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: unclosed array");
+        }
+
+        std::string array_content = trimmed.substr(array_start + 1, array_end - array_start - 1);
+
+        // Parse string values
+        size_t pos = 0;
+        while (pos < array_content.length()) {
+            // Skip whitespace
+            while (pos < array_content.length() && std::isspace(array_content[pos])) {
+                ++pos;
+            }
+
+            if (pos >= array_content.length()) {
+                break;
+            }
+
+            // Look for string start
+            if (array_content[pos] == '"') {
+                ++pos;
+                size_t string_end = array_content.find('"', pos);
+                if (string_end == std::string::npos) {
+                    throw std::runtime_error("Invalid JSON: unclosed string");
+                }
+                labels.push_back(array_content.substr(pos, string_end - pos));
+                pos = string_end + 1;
+
+                // Skip to next comma or end
+                while (pos < array_content.length() &&
+                       (std::isspace(array_content[pos]) || array_content[pos] == ',')) {
+                    ++pos;
+                }
+            } else {
+                ++pos;
             }
         }
     }
 
-private:
-    core::Vector returns_;
+    /**
+     * @brief Parse JSON object format: {"returns": [...], "labels": [...]}
+     */
+    static void parseJSONObject(const std::string& json_str, std::vector<double>& returns,
+                                std::vector<std::string>& labels) {
+        std::string trimmed = trim(json_str);
+
+        // Find "returns" field
+        size_t returns_pos = trimmed.find("\"returns\"");
+        if (returns_pos == std::string::npos) {
+            returns_pos = trimmed.find("'returns'");
+        }
+        if (returns_pos == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: 'returns' field not found");
+        }
+
+        // Find the array after "returns"
+        size_t colon_pos = trimmed.find(':', returns_pos);
+        if (colon_pos == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected ':' after 'returns'");
+        }
+
+        size_t array_start = trimmed.find('[', colon_pos);
+        if (array_start == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: expected array for 'returns'");
+        }
+
+        size_t array_end = trimmed.find(']', array_start);
+        if (array_end == std::string::npos) {
+            throw std::runtime_error("Invalid JSON: unclosed array for 'returns'");
+        }
+
+        std::string returns_array = trimmed.substr(array_start, array_end - array_start + 1);
+        parseJSONArray(returns_array, returns);
+
+        // Try to find "labels" field (optional)
+        size_t labels_pos = trimmed.find("\"labels\"");
+        if (labels_pos == std::string::npos) {
+            labels_pos = trimmed.find("'labels'");
+        }
+
+        if (labels_pos != std::string::npos) {
+            size_t labels_colon = trimmed.find(':', labels_pos);
+            if (labels_colon != std::string::npos) {
+                size_t labels_array_start = trimmed.find('[', labels_colon);
+                if (labels_array_start != std::string::npos) {
+                    size_t labels_array_end = trimmed.find(']', labels_array_start);
+                    if (labels_array_end != std::string::npos) {
+                        std::string labels_array = trimmed.substr(
+                            labels_array_start, labels_array_end - labels_array_start + 1);
+                        parseJSONStringArray(labels_array, labels);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * @brief Trim whitespace from string.

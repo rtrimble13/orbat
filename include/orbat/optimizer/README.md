@@ -23,7 +23,8 @@ Container for expected returns of assets in a portfolio.
 **Features:**
 - Backed by `orbat::core::Vector`
 - CSV import with automatic header detection
-- JSON import (array format)
+- JSON import (multiple formats supported)
+- Asset labels/names support
 - Validation: non-empty, finite values
 
 **Example Usage:**
@@ -36,16 +37,23 @@ using orbat::optimizer::ExpectedReturns;
 // Programmatic creation
 ExpectedReturns returns({0.08, 0.12, 0.10});
 
+// With labels
+std::vector<std::string> labels = {"Stock A", "Stock B", "Stock C"};
+ExpectedReturns returns_labeled(orbat::core::Vector({0.08, 0.12, 0.10}), labels);
+
 // Load from CSV
 ExpectedReturns returns_csv = ExpectedReturns::fromCSV("returns.csv");
 
-// Load from JSON
+// Load from JSON (with labels if provided)
 ExpectedReturns returns_json = ExpectedReturns::fromJSON("returns.json");
 
 // Access data
 for (size_t i = 0; i < returns.size(); ++i) {
-    std::cout << "Asset " << i << ": " << returns[i] << std::endl;
+    std::cout << returns.getLabel(i) << ": " << returns[i] << std::endl;
 }
+
+// Set or modify labels
+returns.setLabels({"AAPL", "GOOGL", "MSFT"});
 ```
 
 **CSV Format:**
@@ -64,8 +72,20 @@ expected_return
 ```
 
 **JSON Format:**
+
+Simple array:
 ```json
 [0.08, 0.12, 0.10]
+```
+
+Object with returns:
+```json
+{"returns": [0.08, 0.12, 0.10]}
+```
+
+Object with returns and labels:
+```json
+{"returns": [0.08, 0.12, 0.10], "labels": ["Stock A", "Stock B", "Stock C"]}
 ```
 
 ### CovarianceMatrix
@@ -75,7 +95,8 @@ Container for covariance matrix of asset returns.
 **Features:**
 - Backed by `orbat::core::Matrix`
 - CSV import with automatic header detection
-- JSON import (2D array format)
+- JSON import (multiple formats supported)
+- Asset labels/names support
 - Validation: square, symmetric, positive diagonal, finite values
 - Dimension matching utilities
 
@@ -93,10 +114,17 @@ CovarianceMatrix cov({
     {0.005, 0.008, 0.01}
 });
 
+// With labels
+std::vector<std::string> labels = {"Stock A", "Stock B", "Stock C"};
+CovarianceMatrix cov_labeled(
+    orbat::core::Matrix({{0.04, 0.01}, {0.01, 0.0225}}),
+    labels
+);
+
 // Load from CSV
 CovarianceMatrix cov_csv = CovarianceMatrix::fromCSV("covariance.csv");
 
-// Load from JSON
+// Load from JSON (with labels if provided)
 CovarianceMatrix cov_json = CovarianceMatrix::fromJSON("covariance.json");
 
 // Validate dimensions match
@@ -104,8 +132,9 @@ if (cov.dimensionsMatch(returns.size())) {
     std::cout << "Ready for optimization!" << std::endl;
 }
 
-// Access data
+// Access data with labels
 for (size_t i = 0; i < cov.size(); ++i) {
+    std::cout << cov.getLabel(i) << ": ";
     for (size_t j = 0; j < cov.size(); ++j) {
         std::cout << cov(i, j) << " ";
     }
@@ -121,10 +150,25 @@ for (size_t i = 0; i < cov.size(); ++i) {
 ```
 
 **JSON Format:**
+
+Simple 2D array:
 ```json
 [[0.04, 0.01, 0.005],
  [0.01, 0.0225, 0.008],
  [0.005, 0.008, 0.01]]
+```
+
+Object with covariance:
+```json
+{"covariance": [[0.04, 0.01], [0.01, 0.0225]]}
+```
+
+Object with covariance and labels:
+```json
+{
+  "covariance": [[0.04, 0.01], [0.01, 0.0225]],
+  "labels": ["Stock A", "Stock B"]
+}
 ```
 
 ## Validation
@@ -227,8 +271,6 @@ cd build && ctest -R "ExpectedReturnsTest|CovarianceMatrixTest"
 ## Future Enhancements
 
 Potential improvements for future versions:
-- Extended JSON format support (object with named fields)
-- Asset labels/names
 - Covariance matrix estimation from historical returns
 - Correlation matrix conversion utilities
 - Streaming/incremental loading for large datasets

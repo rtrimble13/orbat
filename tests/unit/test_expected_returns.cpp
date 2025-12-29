@@ -190,3 +190,95 @@ TEST(ExpectedReturnsTest, SingleAsset) {
     EXPECT_EQ(returns.size(), 1);
     EXPECT_DOUBLE_EQ(returns[0], 0.08);
 }
+
+// Test asset labels
+TEST(ExpectedReturnsTest, ConstructWithLabels) {
+    Vector v({0.08, 0.12, 0.10});
+    std::vector<std::string> labels = {"Stock A", "Stock B", "Stock C"};
+    ExpectedReturns returns(v, labels);
+
+    EXPECT_EQ(returns.size(), 3);
+    EXPECT_EQ(returns.labels().size(), 3);
+    EXPECT_EQ(returns.labels()[0], "Stock A");
+    EXPECT_EQ(returns.labels()[1], "Stock B");
+    EXPECT_EQ(returns.labels()[2], "Stock C");
+}
+
+TEST(ExpectedReturnsTest, LabelsAccessors) {
+    ExpectedReturns returns({0.08, 0.12, 0.10});
+
+    // Initially no labels
+    EXPECT_TRUE(returns.labels().empty());
+    EXPECT_FALSE(returns.hasLabel(0));
+    EXPECT_EQ(returns.getLabel(0), "Asset 0");
+    EXPECT_EQ(returns.getLabel(1), "Asset 1");
+
+    // Set labels
+    std::vector<std::string> labels = {"Stock A", "Stock B", "Stock C"};
+    returns.setLabels(labels);
+
+    EXPECT_TRUE(returns.hasLabel(0));
+    EXPECT_EQ(returns.getLabel(0), "Stock A");
+    EXPECT_EQ(returns.getLabel(1), "Stock B");
+}
+
+TEST(ExpectedReturnsTest, LabelsSizeMismatch) {
+    Vector v({0.08, 0.12, 0.10});
+    std::vector<std::string> labels = {"Stock A", "Stock B"};  // Wrong size
+
+    EXPECT_THROW({ ExpectedReturns returns(v, labels); }, std::invalid_argument);
+}
+
+TEST(ExpectedReturnsTest, SetLabelsSizeMismatch) {
+    ExpectedReturns returns({0.08, 0.12, 0.10});
+    std::vector<std::string> labels = {"Stock A", "Stock B"};  // Wrong size
+
+    EXPECT_THROW(returns.setLabels(labels), std::invalid_argument);
+}
+
+// Test JSON object format
+TEST(ExpectedReturnsTest, LoadFromJSONObject) {
+    ExpectedReturns returns = ExpectedReturns::fromJSON("data/expected_returns_object.json");
+
+    EXPECT_EQ(returns.size(), 3);
+    EXPECT_DOUBLE_EQ(returns[0], 0.08);
+    EXPECT_DOUBLE_EQ(returns[1], 0.12);
+    EXPECT_DOUBLE_EQ(returns[2], 0.10);
+}
+
+TEST(ExpectedReturnsTest, LoadFromJSONWithLabels) {
+    ExpectedReturns returns = ExpectedReturns::fromJSON("data/expected_returns_with_labels.json");
+
+    EXPECT_EQ(returns.size(), 3);
+    EXPECT_DOUBLE_EQ(returns[0], 0.08);
+    EXPECT_DOUBLE_EQ(returns[1], 0.12);
+    EXPECT_DOUBLE_EQ(returns[2], 0.10);
+
+    EXPECT_EQ(returns.labels().size(), 3);
+    EXPECT_EQ(returns.labels()[0], "Stock A");
+    EXPECT_EQ(returns.labels()[1], "Stock B");
+    EXPECT_EQ(returns.labels()[2], "Stock C");
+}
+
+TEST(ExpectedReturnsTest, LoadFromJSONStringObject) {
+    std::string json = R"({"returns": [0.08, 0.12, 0.10]})";
+    ExpectedReturns returns = ExpectedReturns::fromJSONString(json);
+
+    EXPECT_EQ(returns.size(), 3);
+    EXPECT_DOUBLE_EQ(returns[0], 0.08);
+    EXPECT_DOUBLE_EQ(returns[1], 0.12);
+    EXPECT_DOUBLE_EQ(returns[2], 0.10);
+}
+
+TEST(ExpectedReturnsTest, LoadFromJSONStringWithLabels) {
+    std::string json = R"({"returns": [0.08, 0.12], "labels": ["Stock A", "Stock B"]})";
+    ExpectedReturns returns = ExpectedReturns::fromJSONString(json);
+
+    EXPECT_EQ(returns.size(), 2);
+    EXPECT_DOUBLE_EQ(returns[0], 0.08);
+    EXPECT_DOUBLE_EQ(returns[1], 0.12);
+
+    EXPECT_EQ(returns.labels().size(), 2);
+    EXPECT_EQ(returns.labels()[0], "Stock A");
+    EXPECT_EQ(returns.labels()[1], "Stock B");
+}
