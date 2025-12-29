@@ -495,7 +495,8 @@ public:
         const size_t n = rows_;
         Vector x(n);
 
-        for (int i = n - 1; i >= 0; --i) {
+        // Backward substitution: iterate from last row to first
+        for (size_t i = n; i-- > 0;) {
             double sum = 0.0;
             for (size_t j = i + 1; j < n; ++j) {
                 sum += (*this)(i, j) * x[j];
