@@ -377,9 +377,14 @@ TEST(EfficientFrontierTest, ExportedDataMatchesFrontier) {
     std::string header;
     std::getline(file, header);  // Skip header
 
+    // Only check successful portfolios (same as export logic)
     for (const auto& result : frontier) {
+        if (!result.success()) {
+            continue;  // Skip failed portfolios, matching export behavior
+        }
+        
         std::string line;
-        std::getline(file, line);
+        ASSERT_TRUE(std::getline(file, line)) << "Expected more lines in CSV";
 
         std::istringstream iss(line);
         double returnVal, riskVal;
