@@ -69,6 +69,28 @@ See [Black-Litterman Model Documentation](docs/black_litterman.md) for Bayesian 
 
 See [Efficient Frontier Documentation](docs/efficient_frontier.md) for frontier generation and visualization.
 
+See [CLI Documentation](docs/cli.md) for command-line interface usage and examples.
+
+## Command-Line Interface
+
+The `orbat-cli` tool provides a scriptable interface for portfolio optimization:
+
+```bash
+# Modern Portfolio Theory optimization
+orbat mpt --returns returns.csv --covariance cov.csv --output result.json
+
+# Black-Litterman optimization
+orbat bl --returns market_weights.csv --covariance cov.csv
+```
+
+To build the CLI:
+```bash
+cmake -S . -B build -DBUILD_CLI=ON
+cmake --build build
+```
+
+See the [CLI documentation](docs/cli.md) for complete usage guide.
+
 ## Building
 
 ### Prerequisites
