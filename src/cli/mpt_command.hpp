@@ -72,9 +72,13 @@ public:
             constraints.add(std::make_shared<optimizer::LongOnlyConstraint>());
 
             // Parse additional constraints if provided
+            // Note: Custom constraints file parsing is not yet implemented.
+            // Planned feature: Support loading constraint definitions from JSON/CSV files
+            // to specify box constraints, sector constraints, and other custom limitations.
             if (parser.hasFlag("constraints")) {
-                // For now, constraints file parsing not implemented
-                // Future enhancement: parse custom constraints from file
+                std::cerr << "Warning: --constraints flag is not yet implemented. Using default "
+                             "long-only constraint."
+                          << std::endl;
             }
 
             // Create optimizer

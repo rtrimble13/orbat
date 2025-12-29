@@ -33,7 +33,7 @@ public:
      * @return The command string, or empty if none provided
      */
     std::string getCommand() const {
-        if (args_.empty() || args_[0].rfind("--", 0) == 0) {
+        if (args_.empty() || args_[0].rfind("-", 0) == 0) {
             return "";
         }
         return args_[0];
@@ -41,36 +41,38 @@ public:
 
     /**
      * @brief Check if a flag is present.
-     * @param flag Flag name (without --)
+     * @param flag Flag name (without -- or -)
      * @return true if flag is present
      */
     bool hasFlag(const std::string& flag) const {
-        std::string fullFlag = "--" + flag;
+        // Support both --flag and -f (single char) formats
+        std::string fullFlag = (flag.length() == 1 ? "-" : "--") + flag;
         return std::find(args_.begin(), args_.end(), fullFlag) != args_.end();
     }
 
     /**
      * @brief Get the value of a flag.
-     * @param flag Flag name (without --)
+     * @param flag Flag name (without -- or -)
      * @return The value following the flag
      * @throws std::runtime_error if flag not found or has no value
      */
     std::string getFlagValue(const std::string& flag) const {
-        std::string fullFlag = "--" + flag;
+        // Support both --flag and -f (single char) formats
+        std::string fullFlag = (flag.length() == 1 ? "-" : "--") + flag;
         auto it = std::find(args_.begin(), args_.end(), fullFlag);
         if (it == args_.end()) {
-            throw std::runtime_error("Flag --" + flag + " not found");
+            throw std::runtime_error("Flag " + fullFlag + " not found");
         }
         ++it;
         if (it == args_.end()) {
-            throw std::runtime_error("Flag --" + flag + " has no value");
+            throw std::runtime_error("Flag " + fullFlag + " has no value");
         }
         return *it;
     }
 
     /**
      * @brief Get the value of a flag with a default.
-     * @param flag Flag name (without --)
+     * @param flag Flag name (without -- or -)
      * @param defaultValue Default value if flag not present
      * @return The flag value or default
      */

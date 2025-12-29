@@ -40,7 +40,7 @@ TEST(ArgParserTest, HelpFlag) {
 }
 
 TEST(ArgParserTest, ShortHelpFlag) {
-    char* argv[] = {const_cast<char*>("orbat"), const_cast<char*>("--h")};
+    char* argv[] = {const_cast<char*>("orbat"), const_cast<char*>("-h")};
     ArgParser parser(2, argv);
     EXPECT_TRUE(parser.hasFlag("h"));
 }

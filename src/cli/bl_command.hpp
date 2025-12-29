@@ -74,8 +74,10 @@ public:
             optimizer::BlackLittermanOptimizer blOptimizer(marketWeights, covariance, riskAversion,
                                                            tau);
 
-            // For this basic implementation, optimize with no views
-            // Future enhancement: parse views from file
+            // Note: View specification is not yet implemented in CLI.
+            // Planned feature: Support loading investor views from JSON/CSV files
+            // to incorporate subjective beliefs about expected returns.
+            // For now, the optimizer uses only the equilibrium returns derived from market weights.
             auto result = blOptimizer.optimize();
 
             // Output results

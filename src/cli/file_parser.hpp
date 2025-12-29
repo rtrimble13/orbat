@@ -41,8 +41,13 @@ public:
         std::string line;
 
         while (std::getline(file, line)) {
-            // Skip comments and empty lines
-            if (line.empty() || line[0] == '#') {
+            // Skip empty lines and trim whitespace
+            size_t start = line.find_first_not_of(" \t\r\n");
+            if (start == std::string::npos || line.empty()) {
+                continue;
+            }
+            // Skip comments (lines starting with # after whitespace)
+            if (line[start] == '#') {
                 continue;
             }
 
@@ -85,8 +90,13 @@ public:
         std::string line;
 
         while (std::getline(file, line)) {
-            // Skip comments and empty lines
-            if (line.empty() || line[0] == '#') {
+            // Skip empty lines and trim whitespace
+            size_t start = line.find_first_not_of(" \t\r\n");
+            if (start == std::string::npos || line.empty()) {
+                continue;
+            }
+            // Skip comments (lines starting with # after whitespace)
+            if (line[start] == '#') {
                 continue;
             }
 
