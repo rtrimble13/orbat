@@ -30,7 +30,7 @@ struct MarkowitzResult {
     core::Vector weights;   // Optimal portfolio weights
     double expectedReturn;  // Expected portfolio return
     double risk;            // Portfolio risk (standard deviation/volatility)
-    double sharpeRatio;     // Sharpe ratio (expectedReturn / risk)
+    double sharpeRatio;     // Sharpe ratio (expectedReturn - riskFreeRate) / risk
     bool converged;         // Whether optimization converged
     std::string message;    // Status or error message
 
@@ -39,6 +39,32 @@ struct MarkowitzResult {
      * @return true if converged, false otherwise
      */
     bool success() const { return converged; }
+
+    /**
+     * @brief Calculate Sharpe ratio with a custom risk-free rate.
+     *
+     * Computes the risk-adjusted return as (expectedReturn - riskFreeRate) / risk.
+     * The default Sharpe ratio in the struct assumes a risk-free rate of 0.
+     *
+     * @param riskFreeRate The risk-free rate (default: 0.0)
+     * @return Sharpe ratio adjusted for the given risk-free rate
+     */
+    double calculateSharpeRatio(double riskFreeRate = 0.0) const {
+        if (risk <= core::EPSILON) {
+            return 0.0;
+        }
+        return (expectedReturn - riskFreeRate) / risk;
+    }
+
+    /**
+     * @brief Update the Sharpe ratio with a custom risk-free rate.
+     *
+     * Modifies the sharpeRatio field to reflect a different risk-free rate.
+     * Useful when you want to store results with a non-zero risk-free rate.
+     *
+     * @param riskFreeRate The risk-free rate to use
+     */
+    void setRiskFreeRate(double riskFreeRate) { sharpeRatio = calculateSharpeRatio(riskFreeRate); }
 
     /**
      * @brief Serialize result to JSON string.

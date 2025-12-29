@@ -298,3 +298,96 @@ TEST(OptimizationResultTest, ZeroRiskEdgeCase) {
 
     EXPECT_DOUBLE_EQ(deserialized.sharpeRatio, 0.0);
 }
+
+// Test custom risk-free rate
+TEST(OptimizationResultTest, CustomRiskFreeRate) {
+    Vector weights({0.3, 0.5, 0.2});
+    double expectedReturn = 0.12;
+    double risk = 0.15;
+    double defaultSharpe = expectedReturn / risk;
+
+    MarkowitzResult result{weights, expectedReturn, risk, defaultSharpe, true, "Success"};
+
+    // Default Sharpe ratio (rf = 0)
+    EXPECT_NEAR(result.sharpeRatio, 0.8, 1e-6);
+
+    // Calculate Sharpe with rf = 0.02 (2%)
+    double sharpeWith2Pct = result.calculateSharpeRatio(0.02);
+    double expectedSharpe = (0.12 - 0.02) / 0.15;
+    EXPECT_NEAR(sharpeWith2Pct, expectedSharpe, 1e-6);
+    EXPECT_NEAR(sharpeWith2Pct, 0.6666666667, 1e-6);
+
+    // Original sharpeRatio field should not change
+    EXPECT_NEAR(result.sharpeRatio, 0.8, 1e-6);
+
+    // Calculate Sharpe with rf = 0.05 (5%)
+    double sharpeWith5Pct = result.calculateSharpeRatio(0.05);
+    expectedSharpe = (0.12 - 0.05) / 0.15;
+    EXPECT_NEAR(sharpeWith5Pct, expectedSharpe, 1e-6);
+    EXPECT_NEAR(sharpeWith5Pct, 0.4666666667, 1e-6);
+}
+
+// Test setRiskFreeRate method
+TEST(OptimizationResultTest, SetRiskFreeRate) {
+    Vector weights({0.3, 0.5, 0.2});
+    double expectedReturn = 0.12;
+    double risk = 0.15;
+    double defaultSharpe = expectedReturn / risk;
+
+    MarkowitzResult result{weights, expectedReturn, risk, defaultSharpe, true, "Success"};
+
+    // Default Sharpe ratio (rf = 0)
+    EXPECT_NEAR(result.sharpeRatio, 0.8, 1e-6);
+
+    // Update to use rf = 0.03 (3%)
+    result.setRiskFreeRate(0.03);
+    double expectedSharpe = (0.12 - 0.03) / 0.15;
+    EXPECT_NEAR(result.sharpeRatio, expectedSharpe, 1e-6);
+    EXPECT_NEAR(result.sharpeRatio, 0.6, 1e-6);
+
+    // Verify all other fields remain unchanged
+    EXPECT_DOUBLE_EQ(result.expectedReturn, 0.12);
+    EXPECT_DOUBLE_EQ(result.risk, 0.15);
+    EXPECT_EQ(result.weights.size(), 3);
+}
+
+// Test risk-free rate with optimizer results
+TEST(OptimizationResultTest, RiskFreeRateWithOptimizerResults) {
+    ExpectedReturns returns({0.10, 0.12, 0.15});
+    CovarianceMatrix cov({{0.04, 0.01, 0.005}, {0.01, 0.0225, 0.008}, {0.005, 0.008, 0.01}});
+
+    MarkowitzOptimizer optimizer(returns, cov);
+    auto result = optimizer.minimumVariance();
+
+    ASSERT_TRUE(result.success());
+
+    // Default Sharpe (rf = 0)
+    double defaultSharpe = result.sharpeRatio;
+    EXPECT_GT(defaultSharpe, 0.0);
+
+    // Calculate with different risk-free rates
+    double sharpeWith2Pct = result.calculateSharpeRatio(0.02);
+    double sharpeWith5Pct = result.calculateSharpeRatio(0.05);
+
+    // Higher risk-free rate should give lower Sharpe ratio
+    EXPECT_LT(sharpeWith2Pct, defaultSharpe);
+    EXPECT_LT(sharpeWith5Pct, sharpeWith2Pct);
+
+    // Verify calculation
+    double expectedSharpe2 = (result.expectedReturn - 0.02) / result.risk;
+    EXPECT_NEAR(sharpeWith2Pct, expectedSharpe2, 1e-6);
+}
+
+// Test zero risk with custom risk-free rate
+TEST(OptimizationResultTest, ZeroRiskWithCustomRiskFreeRate) {
+    Vector weights({1.0, 0.0, 0.0});
+    MarkowitzResult result{weights, 0.1, 0.0, 0.0, true, "Zero risk"};
+
+    // Should return 0 for any risk-free rate
+    EXPECT_DOUBLE_EQ(result.calculateSharpeRatio(0.0), 0.0);
+    EXPECT_DOUBLE_EQ(result.calculateSharpeRatio(0.02), 0.0);
+    EXPECT_DOUBLE_EQ(result.calculateSharpeRatio(0.05), 0.0);
+
+    result.setRiskFreeRate(0.03);
+    EXPECT_DOUBLE_EQ(result.sharpeRatio, 0.0);
+}

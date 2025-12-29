@@ -277,12 +277,38 @@ The portfolio risk (volatility) is:
 
 ### Sharpe Ratio
 
-The Sharpe ratio measures risk-adjusted return (assuming risk-free rate = 0):
+The Sharpe ratio measures risk-adjusted return. By default, it assumes a risk-free rate of 0:
 ```
 Sharpe = E[R_p] / σ_p
 ```
 
 All optimization results automatically include the computed Sharpe ratio for easy comparison of portfolios.
+
+#### Custom Risk-Free Rate
+
+You can calculate or update the Sharpe ratio with a custom risk-free rate:
+
+```cpp
+auto result = optimizer.minimumVariance();
+
+// Default Sharpe ratio (rf = 0)
+std::cout << "Sharpe (rf=0%): " << result.sharpeRatio << std::endl;
+
+// Calculate with 2% risk-free rate without modifying result
+double sharpeWith2Pct = result.calculateSharpeRatio(0.02);
+std::cout << "Sharpe (rf=2%): " << sharpeWith2Pct << std::endl;
+
+// Update the stored Sharpe ratio to use 3% risk-free rate
+result.setRiskFreeRate(0.03);
+std::cout << "Updated Sharpe (rf=3%): " << result.sharpeRatio << std::endl;
+```
+
+The Sharpe ratio with a risk-free rate is calculated as:
+```
+Sharpe = (E[R_p] - r_f) / σ_p
+```
+
+where `r_f` is the risk-free rate.
 
 ### Success Flag
 
