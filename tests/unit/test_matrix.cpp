@@ -485,9 +485,10 @@ TEST(MatrixTest, IsPositiveDefiniteNegativeDiagonal) {
 }
 
 TEST(MatrixTest, IsPositiveDefiniteSingularMatrix) {
-    // Singular matrix (rank-deficient) is not positive-definite
-    // Different rows, but linearly dependent
-    Matrix m({{2.0, 4.0}, {1.0, 2.0}});
+    // Singular symmetric matrix (rank-deficient) is not positive-definite
+    // This represents a covariance matrix with two perfectly correlated assets
+    // where the second asset has exactly twice the variance of the first
+    Matrix m({{1.0, 2.0}, {2.0, 4.0}});
     EXPECT_FALSE(m.isPositiveDefinite());
 }
 
