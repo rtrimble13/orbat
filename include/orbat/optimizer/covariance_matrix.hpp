@@ -194,9 +194,6 @@ public:
      *    [0.01, 0.0225, 0.008],
      *    [0.005, 0.008, 0.01]]
      *
-     * Or an object with a "covariance" field:
-     *   {"covariance": [[0.04, 0.01], [0.01, 0.0225]]}
-     *
      * @param filename Path to JSON file
      * @return CovarianceMatrix object
      * @throws std::runtime_error if file cannot be opened or parsed
@@ -296,8 +293,11 @@ public:
                 }
             } else if (trimmed[pos] == ',') {
                 ++pos;
+            } else if (!std::isspace(trimmed[pos])) {
+                // Unexpected non-whitespace character
+                throw std::runtime_error(std::string("Invalid JSON: unexpected character '") +
+                                         trimmed[pos] + "' at position " + std::to_string(pos));
             } else {
-                // Unexpected character
                 ++pos;
             }
         }

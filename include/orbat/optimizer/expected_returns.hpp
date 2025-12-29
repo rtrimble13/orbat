@@ -174,9 +174,6 @@ public:
      * JSON format should be an array of numbers:
      *   [0.08, 0.12, 0.10]
      *
-     * Or an object with a "returns" or "expected_returns" field:
-     *   {"expected_returns": [0.08, 0.12, 0.10]}
-     *
      * @param filename Path to JSON file
      * @return ExpectedReturns object
      * @throws std::runtime_error if file cannot be opened or parsed
