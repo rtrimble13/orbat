@@ -30,7 +30,16 @@ orbat/
   - Optimized for positive-definite covariance matrices
   - Comprehensive bounds checking in debug mode
 
+- **Portfolio Constraints**: Modular constraint system for real-world portfolio optimization
+  - Fully invested constraint (weights sum to 1.0)
+  - Long-only constraint (no short positions)
+  - Box constraints (per-asset position limits)
+  - Constraint composition and feasibility validation
+  - Consistent with CFA Institute best practices
+
 See [Linear Algebra Documentation](docs/linear_algebra.md) for detailed API reference and usage examples.
+
+See [Portfolio Constraints Documentation](docs/constraints.md) for constraint system usage and best practices.
 
 ## Building
 

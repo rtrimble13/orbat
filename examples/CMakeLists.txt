@@ -21,3 +21,12 @@ target_link_libraries(cma_inputs_demo
     PRIVATE
         orbat
 )
+
+# Constraints demo
+add_executable(constraints_demo
+    constraints_demo.cpp
+)
+target_link_libraries(constraints_demo
+    PRIVATE
+        orbat
+)
