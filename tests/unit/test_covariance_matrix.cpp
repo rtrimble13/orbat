@@ -106,6 +106,26 @@ TEST(CovarianceMatrixTest, LoadFromCSVAsymmetric) {
                  std::invalid_argument);
 }
 
+TEST(CovarianceMatrixTest, LoadFromCSVWithLabels) {
+    CovarianceMatrix cov = CovarianceMatrix::fromCSV("data/covariance_with_labels.csv");
+
+    EXPECT_EQ(cov.size(), 3);
+    EXPECT_DOUBLE_EQ(cov(0, 0), 0.04);
+    EXPECT_DOUBLE_EQ(cov(0, 1), 0.01);
+    EXPECT_DOUBLE_EQ(cov(0, 2), 0.005);
+    EXPECT_DOUBLE_EQ(cov(1, 0), 0.01);
+    EXPECT_DOUBLE_EQ(cov(1, 1), 0.0225);
+    EXPECT_DOUBLE_EQ(cov(1, 2), 0.008);
+    EXPECT_DOUBLE_EQ(cov(2, 0), 0.005);
+    EXPECT_DOUBLE_EQ(cov(2, 1), 0.008);
+    EXPECT_DOUBLE_EQ(cov(2, 2), 0.01);
+
+    EXPECT_EQ(cov.labels().size(), 3);
+    EXPECT_EQ(cov.labels()[0], "Stock A");
+    EXPECT_EQ(cov.labels()[1], "Stock B");
+    EXPECT_EQ(cov.labels()[2], "Stock C");
+}
+
 // Test JSON loading
 TEST(CovarianceMatrixTest, LoadFromJSON) {
     CovarianceMatrix cov = CovarianceMatrix::fromJSON("data/covariance.json");

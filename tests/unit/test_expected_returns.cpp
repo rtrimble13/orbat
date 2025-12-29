@@ -77,6 +77,20 @@ TEST(ExpectedReturnsTest, LoadFromCSVInvalidData) {
     EXPECT_THROW(ExpectedReturns::fromCSV("data/invalid_returns.csv"), std::runtime_error);
 }
 
+TEST(ExpectedReturnsTest, LoadFromCSVWithLabels) {
+    ExpectedReturns returns = ExpectedReturns::fromCSV("data/expected_returns_with_labels.csv");
+
+    EXPECT_EQ(returns.size(), 3);
+    EXPECT_DOUBLE_EQ(returns[0], 0.08);
+    EXPECT_DOUBLE_EQ(returns[1], 0.12);
+    EXPECT_DOUBLE_EQ(returns[2], 0.10);
+
+    EXPECT_EQ(returns.labels().size(), 3);
+    EXPECT_EQ(returns.labels()[0], "Stock A");
+    EXPECT_EQ(returns.labels()[1], "Stock B");
+    EXPECT_EQ(returns.labels()[2], "Stock C");
+}
+
 // Test JSON loading
 TEST(ExpectedReturnsTest, LoadFromJSON) {
     ExpectedReturns returns = ExpectedReturns::fromJSON("data/expected_returns.json");

@@ -149,10 +149,10 @@ public:
      *
      * CSV format should be either:
      * - Single column of returns (one per line)
-     * - Multiple columns where the first column contains returns
+     * - Two columns: returns, labels
      * - Optional header row (detected automatically if non-numeric)
      *
-     * Example CSV:
+     * Example CSV (single column):
      *   0.08
      *   0.12
      *   0.10
@@ -162,6 +162,12 @@ public:
      *   0.08
      *   0.12
      *   0.10
+     *
+     * Or with labels (two columns):
+     *   return,label
+     *   0.08,Stock A
+     *   0.12,Stock B
+     *   0.10,Stock C
      *
      * @param filename Path to CSV file
      * @return ExpectedReturns object
@@ -175,8 +181,10 @@ public:
         }
 
         std::vector<double> returns;
+        std::vector<std::string> labels;
         std::string line;
         bool first_line = true;
+        bool has_labels = false;
 
         while (std::getline(file, line)) {
             // Skip empty lines
@@ -184,33 +192,50 @@ public:
                 continue;
             }
 
-            // Try to parse as number
             std::istringstream iss(line);
-            double value;
+            std::string first_field, second_field;
 
-            // Handle potential commas in CSV
-            std::string first_field;
+            // Parse first field
             if (line.find(',') != std::string::npos) {
                 std::getline(iss, first_field, ',');
+                std::getline(iss, second_field);  // Get rest of line as label
+                first_field = trim(first_field);
+                second_field = trim(second_field);
             } else {
-                first_field = line;
+                first_field = trim(line);
             }
 
-            // Skip header row if it exists (first non-numeric line)
+            // Handle first line (detect header and determine if labels present)
             if (first_line) {
                 first_line = false;
+                double value;
                 std::istringstream test(first_field);
                 if (!(test >> value)) {
                     // Non-numeric first line, treat as header
+                    has_labels = !second_field.empty();
                     continue;
                 }
+                // First line is data
                 returns.push_back(value);
+                if (!second_field.empty()) {
+                    has_labels = true;
+                    labels.push_back(second_field);
+                }
             } else {
+                // Parse data rows
+                double value;
                 std::istringstream value_stream(first_field);
                 if (!(value_stream >> value)) {
                     throw std::runtime_error("Invalid numeric value in CSV: " + first_field);
                 }
                 returns.push_back(value);
+
+                if (has_labels) {
+                    if (second_field.empty()) {
+                        throw std::runtime_error("Missing label in CSV row");
+                    }
+                    labels.push_back(second_field);
+                }
             }
         }
 
@@ -218,7 +243,15 @@ public:
             throw std::runtime_error("No valid data found in CSV file: " + filename);
         }
 
-        return ExpectedReturns(core::Vector(returns));
+        if (has_labels && labels.size() != returns.size()) {
+            throw std::runtime_error("Inconsistent number of labels in CSV file");
+        }
+
+        if (has_labels) {
+            return ExpectedReturns(core::Vector(returns), labels);
+        } else {
+            return ExpectedReturns(core::Vector(returns));
+        }
     }
 
     /**

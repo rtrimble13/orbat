@@ -162,6 +162,12 @@ public:
      *
      * Optional header row is detected and skipped if all values are non-numeric.
      *
+     * With labels (first row and/or first column):
+     *   ,Stock A,Stock B,Stock C
+     *   Stock A,0.04,0.01,0.005
+     *   Stock B,0.01,0.0225,0.008
+     *   Stock C,0.005,0.008,0.01
+     *
      * @param filename Path to CSV file
      * @return CovarianceMatrix object
      * @throws std::runtime_error if file cannot be opened or parsed
@@ -174,8 +180,10 @@ public:
         }
 
         std::vector<std::vector<double>> rows;
+        std::vector<std::string> labels;
         std::string line;
         bool first_line = true;
+        bool has_col_labels = false;
 
         while (std::getline(file, line)) {
             // Skip empty lines
@@ -184,30 +192,77 @@ public:
             }
 
             std::vector<double> row;
+            std::vector<std::string> tokens;
             std::istringstream iss(line);
             std::string token;
 
+            // Parse all tokens
             while (std::getline(iss, token, ',')) {
-                token = trim(token);
-                if (token.empty()) {
-                    continue;
+                tokens.push_back(trim(token));
+            }
+
+            if (tokens.empty()) {
+                continue;
+            }
+
+            // Handle first line - detect if there are column labels
+            if (first_line) {
+                first_line = false;
+
+                // Check if first token is empty or non-numeric (indicates labels)
+                bool first_token_numeric = true;
+                if (!tokens[0].empty()) {
+                    try {
+                        std::stod(tokens[0]);
+                    } catch (...) {
+                        first_token_numeric = false;
+                    }
                 }
 
-                // Try to parse as number
-                try {
-                    double value = std::stod(token);
-                    row.push_back(value);
-                } catch (const std::exception& e) {
-                    // If first line and cannot parse, it's a header
-                    if (first_line) {
-                        row.clear();
-                        break;
+                // If first token is non-numeric or empty, we have labels
+                if (!first_token_numeric || tokens[0].empty()) {
+                    has_col_labels = true;
+                    // Extract column labels (skip first token which is corner cell)
+                    for (size_t i = 1; i < tokens.size(); ++i) {
+                        labels.push_back(tokens[i]);
                     }
-                    throw std::runtime_error("Invalid numeric value in CSV: " + token);
+                    continue;  // Skip this header row
                 }
             }
 
-            first_line = false;
+            // Parse data rows
+            size_t start_idx = 0;
+
+            // Check if first token is a row label
+            if (!tokens.empty()) {
+                bool is_numeric = true;
+                try {
+                    std::stod(tokens[0]);
+                } catch (...) {
+                    is_numeric = false;
+                }
+
+                if (!is_numeric) {
+                    if (!has_col_labels) {
+                        // Collect labels from row headers
+                        labels.push_back(tokens[0]);
+                    }
+                    start_idx = 1;  // Skip the label column
+                }
+            }
+
+            // Parse numeric values
+            for (size_t i = start_idx; i < tokens.size(); ++i) {
+                if (tokens[i].empty()) {
+                    continue;
+                }
+                try {
+                    double value = std::stod(tokens[i]);
+                    row.push_back(value);
+                } catch (const std::exception& e) {
+                    throw std::runtime_error("Invalid numeric value in CSV: " + tokens[i]);
+                }
+            }
 
             if (!row.empty()) {
                 rows.push_back(row);
@@ -237,7 +292,15 @@ public:
             }
         }
 
-        return CovarianceMatrix(std::move(matrix));
+        if (!labels.empty() && labels.size() != n) {
+            throw std::runtime_error("Number of labels must match matrix dimension");
+        }
+
+        if (!labels.empty()) {
+            return CovarianceMatrix(std::move(matrix), labels);
+        } else {
+            return CovarianceMatrix(std::move(matrix));
+        }
     }
 
     /**

@@ -57,18 +57,28 @@ returns.setLabels({"AAPL", "GOOGL", "MSFT"});
 ```
 
 **CSV Format:**
+
+Simple column:
 ```csv
 0.08
 0.12
 0.10
 ```
 
-Or with header:
+With header:
 ```csv
 expected_return
 0.08
 0.12
 0.10
+```
+
+With labels (two columns):
+```csv
+return,label
+0.08,Stock A
+0.12,Stock B
+0.10,Stock C
 ```
 
 **JSON Format:**
@@ -143,10 +153,20 @@ for (size_t i = 0; i < cov.size(); ++i) {
 ```
 
 **CSV Format:**
+
+Simple matrix:
 ```csv
 0.04,0.01,0.005
 0.01,0.0225,0.008
 0.005,0.008,0.01
+```
+
+With labels (first row and column):
+```csv
+,Stock A,Stock B,Stock C
+Stock A,0.04,0.01,0.005
+Stock B,0.01,0.0225,0.008
+Stock C,0.005,0.008,0.01
 ```
 
 **JSON Format:**
