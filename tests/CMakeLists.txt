@@ -70,3 +70,13 @@ target_link_libraries(test_constraint
         GTest::gtest_main
 )
 gtest_discover_tests(test_constraint)
+
+add_executable(test_markowitz
+    unit/test_markowitz.cpp
+)
+target_link_libraries(test_markowitz
+    PRIVATE
+        orbat
+        GTest::gtest_main
+)
+gtest_discover_tests(test_markowitz)
