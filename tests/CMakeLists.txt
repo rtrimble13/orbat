@@ -110,3 +110,17 @@ target_link_libraries(test_optimization_result
         GTest::gtest_main
 )
 gtest_discover_tests(test_optimization_result)
+
+add_executable(test_cli
+    unit/test_cli.cpp
+)
+target_link_libraries(test_cli
+    PRIVATE
+        orbat
+        GTest::gtest_main
+)
+target_include_directories(test_cli
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+)
+gtest_discover_tests(test_cli)
