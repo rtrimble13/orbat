@@ -399,6 +399,7 @@ public:
      * - Matrix is symmetric (within tolerance)
      * - All diagonal elements are positive (variance must be positive)
      * - All values are finite (no NaN or infinity)
+     * - Matrix is positive-definite (required for portfolio optimization)
      *
      * @throws std::invalid_argument if validation fails
      */
@@ -442,6 +443,14 @@ public:
                     throw std::invalid_argument("Covariance matrix must be symmetric");
                 }
             }
+        }
+
+        // Check positive-definiteness
+        if (!matrix_.isPositiveDefinite()) {
+            throw std::invalid_argument(
+                "Covariance matrix must be positive-definite (all eigenvalues must be "
+                "positive). This typically indicates perfectly correlated assets or "
+                "rank-deficient data. Check for duplicate assets or linear dependencies.");
         }
     }
 

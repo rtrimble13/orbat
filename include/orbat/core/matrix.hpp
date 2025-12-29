@@ -564,6 +564,67 @@ public:
         return inv;
     }
 
+    /**
+     * @brief Check if matrix is positive-definite.
+     *
+     * A symmetric matrix is positive-definite if all its eigenvalues are positive.
+     * This is tested by attempting a Cholesky decomposition. If the decomposition
+     * succeeds without error, the matrix is positive-definite.
+     *
+     * Note: This method assumes the matrix is symmetric. Non-symmetric matrices
+     * will typically fail the positive-definite test.
+     *
+     * @return true if matrix is positive-definite, false otherwise
+     */
+    bool isPositiveDefinite() const {
+        if (!isSquare()) {
+            return false;
+        }
+
+        // Check if all diagonal elements are positive (necessary condition)
+        for (size_t i = 0; i < rows_; ++i) {
+            if ((*this)(i, i) <= 0.0) {
+                return false;
+            }
+        }
+
+        // Attempt Cholesky decomposition
+        // If it succeeds, the matrix is positive-definite
+        try {
+            const size_t n = rows_;
+            Matrix L(n, n);
+
+            for (size_t i = 0; i < n; ++i) {
+                for (size_t j = 0; j <= i; ++j) {
+                    double sum = 0.0;
+
+                    if (i == j) {
+                        // Diagonal elements
+                        for (size_t k = 0; k < j; ++k) {
+                            sum += L(j, k) * L(j, k);
+                        }
+
+                        double value = (*this)(j, j) - sum;
+                        if (value <= 0.0) {
+                            return false;
+                        }
+                        L(j, j) = std::sqrt(value);
+                    } else {
+                        // Off-diagonal elements
+                        for (size_t k = 0; k < j; ++k) {
+                            sum += L(i, k) * L(j, k);
+                        }
+                        L(i, j) = ((*this)(i, j) - sum) / L(j, j);
+                    }
+                }
+            }
+
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+
 private:
     size_t rows_;
     size_t cols_;

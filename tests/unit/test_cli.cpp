@@ -122,3 +122,117 @@ TEST(BlCommandTest, HelpFlagTakesPrecedence) {
     int result = BlCommand::execute(parser);
     EXPECT_EQ(result, 0);
 }
+
+// Test exit codes for various error conditions
+TEST(MptCommandTest, MissingReturnsFileExitCode) {
+    char* argv[] = {const_cast<char*>("orbat"), const_cast<char*>("mpt"),
+                    const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};
+    ArgParser parser(4, argv);
+
+    // Should return INVALID_ARGUMENTS (3) for missing required flag
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 3);
+}
+
+TEST(MptCommandTest, MissingCovarianceFileExitCode) {
+    char* argv[] = {const_cast<char*>("orbat"), const_cast<char*>("mpt"),
+                    const_cast<char*>("--returns"), const_cast<char*>("data/expected_returns.csv")};
+    ArgParser parser(4, argv);
+
+    // Should return INVALID_ARGUMENTS (3) for missing required flag
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 3);
+}
+
+TEST(MptCommandTest, NonexistentFileExitCode) {
+    char* argv[] = {const_cast<char*>("orbat"),        const_cast<char*>("mpt"),
+                    const_cast<char*>("--returns"),    const_cast<char*>("nonexistent_file.csv"),
+                    const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};
+    ArgParser parser(6, argv);
+
+    // Should return VALIDATION_ERROR (1) for file not found
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 1);
+}
+
+TEST(MptCommandTest, InvalidCovarianceMatrixExitCode) {
+    char* argv[] = {
+        const_cast<char*>("orbat"),        const_cast<char*>("mpt"),
+        const_cast<char*>("--returns"),    const_cast<char*>("data/expected_returns.csv"),
+        const_cast<char*>("--covariance"), const_cast<char*>("data/invalid_asymmetric_cov.csv")};
+    ArgParser parser(6, argv);
+
+    // Should return VALIDATION_ERROR (1) for invalid covariance matrix
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 1);
+}
+
+TEST(MptCommandTest, DimensionMismatchExitCode) {
+    char* argv[] = {
+        const_cast<char*>("orbat"),        const_cast<char*>("mpt"),
+        const_cast<char*>("--returns"),    const_cast<char*>("data/returns_2_assets.csv"),
+        const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};  // 3x3 matrix
+    ArgParser parser(6, argv);
+
+    // Should return VALIDATION_ERROR (1) for dimension mismatch
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 1);
+}
+
+TEST(MptCommandTest, EmptyFileExitCode) {
+    char* argv[] = {const_cast<char*>("orbat"),        const_cast<char*>("mpt"),
+                    const_cast<char*>("--returns"),    const_cast<char*>("data/empty_file.csv"),
+                    const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};
+    ArgParser parser(6, argv);
+
+    // Should return VALIDATION_ERROR (1) for empty file
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 1);
+}
+
+TEST(MptCommandTest, InvalidRiskFreeRateExitCode) {
+    char* argv[] = {
+        const_cast<char*>("orbat"),        const_cast<char*>("mpt"),
+        const_cast<char*>("--returns"),    const_cast<char*>("data/expected_returns.csv"),
+        const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv"),
+        const_cast<char*>("--rf-rate"),    const_cast<char*>("not_a_number")};
+    ArgParser parser(8, argv);
+
+    // Should return INVALID_ARGUMENTS (3) for invalid numeric value
+    int result = MptCommand::execute(parser);
+    EXPECT_EQ(result, 3);
+}
+
+// Test Black-Litterman exit codes
+TEST(BlCommandTest, MissingReturnsFileExitCode) {
+    char* argv[] = {const_cast<char*>("orbat"), const_cast<char*>("bl"),
+                    const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};
+    ArgParser parser(4, argv);
+
+    // Should return INVALID_ARGUMENTS (3) for missing required flag
+    int result = BlCommand::execute(parser);
+    EXPECT_EQ(result, 3);
+}
+
+TEST(BlCommandTest, NonexistentFileExitCode) {
+    char* argv[] = {const_cast<char*>("orbat"),        const_cast<char*>("bl"),
+                    const_cast<char*>("--returns"),    const_cast<char*>("nonexistent_file.csv"),
+                    const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};
+    ArgParser parser(6, argv);
+
+    // Should return VALIDATION_ERROR (1) for file not found
+    int result = BlCommand::execute(parser);
+    EXPECT_EQ(result, 1);
+}
+
+TEST(BlCommandTest, DimensionMismatchExitCode) {
+    char* argv[] = {
+        const_cast<char*>("orbat"),        const_cast<char*>("bl"),
+        const_cast<char*>("--returns"),    const_cast<char*>("data/returns_2_assets.csv"),
+        const_cast<char*>("--covariance"), const_cast<char*>("data/covariance.csv")};  // 3x3 matrix
+    ArgParser parser(6, argv);
+
+    // Should return VALIDATION_ERROR (1) for dimension mismatch
+    int result = BlCommand::execute(parser);
+    EXPECT_EQ(result, 1);
+}

@@ -452,3 +452,69 @@ TEST(MatrixTest, SolveUpperTriangular) {
         EXPECT_NEAR(result[i], b[i], 1e-10);
     }
 }
+
+// Test positive-definiteness check
+TEST(MatrixTest, IsPositiveDefiniteValidMatrix) {
+    // Valid positive-definite covariance matrix
+    Matrix m({{0.04, 0.01, 0.005}, {0.01, 0.0225, 0.008}, {0.005, 0.008, 0.01}});
+    EXPECT_TRUE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteIdentityMatrix) {
+    // Identity matrix is positive-definite
+    Matrix I({{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}});
+    EXPECT_TRUE(I.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteNonSquare) {
+    // Non-square matrix should return false
+    Matrix m(2, 3);
+    EXPECT_FALSE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteZeroDiagonal) {
+    // Matrix with zero diagonal element should return false
+    Matrix m({{1.0, 0.1}, {0.1, 0.0}});
+    EXPECT_FALSE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteNegativeDiagonal) {
+    // Matrix with negative diagonal element should return false
+    Matrix m({{1.0, 0.1}, {0.1, -1.0}});
+    EXPECT_FALSE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteSingularMatrix) {
+    // Singular matrix (rank-deficient) is not positive-definite
+    Matrix m({{1.0, 1.0}, {1.0, 1.0}});
+    EXPECT_FALSE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteHighCorrelation) {
+    // Matrix with very high correlation (0.99) - still positive-definite but close to singular
+    Matrix m({{1.0, 0.99, 0.99}, {0.99, 1.0, 0.99}, {0.99, 0.99, 1.0}});
+    // This should still be positive-definite (though numerically challenging)
+    EXPECT_TRUE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefinitePerfectCorrelation) {
+    // Matrix with perfect correlation (rank-deficient) - not positive-definite
+    Matrix m({{1.0, 1.0}, {1.0, 1.0}});
+    EXPECT_FALSE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteReasonableCorrelation) {
+    // Matrix with reasonable correlations should pass
+    double var1 = 0.04;
+    double var2 = 0.0225;
+    double corr = 0.5;
+    double cov12 = corr * std::sqrt(var1 * var2);
+    Matrix m({{var1, cov12}, {cov12, var2}});
+    EXPECT_TRUE(m.isPositiveDefinite());
+}
+
+TEST(MatrixTest, IsPositiveDefiniteNegativeSemiDefinite) {
+    // Negative semi-definite matrix should fail
+    Matrix m({{-1.0, 0.0}, {0.0, -1.0}});
+    EXPECT_FALSE(m.isPositiveDefinite());
+}

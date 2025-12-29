@@ -11,6 +11,7 @@
 #include <string>
 
 #include "arg_parser.hpp"
+#include "error_codes.hpp"
 #include "file_parser.hpp"
 
 namespace orbat {
@@ -34,27 +35,91 @@ public:
             // Check for help flag
             if (parser.isHelp()) {
                 printHelp();
-                return 0;
+                return static_cast<int>(ExitCode::SUCCESS);
             }
 
             // Parse required flags
             if (!parser.hasFlag("returns")) {
-                throw std::runtime_error("Missing required flag: --returns");
+                std::cerr << "Error: Missing required input - Expected returns data not provided"
+                          << std::endl;
+                std::cerr << "Usage: Use --returns <file> to specify expected returns CSV file"
+                          << std::endl;
+                std::cerr << "Run 'orbat mpt --help' for more information." << std::endl;
+                return static_cast<int>(ExitCode::INVALID_ARGUMENTS);
             }
             if (!parser.hasFlag("covariance")) {
-                throw std::runtime_error("Missing required flag: --covariance");
+                std::cerr << "Error: Missing required input - Covariance matrix not provided"
+                          << std::endl;
+                std::cerr << "Usage: Use --covariance <file> to specify covariance matrix CSV file"
+                          << std::endl;
+                std::cerr << "Run 'orbat mpt --help' for more information." << std::endl;
+                return static_cast<int>(ExitCode::INVALID_ARGUMENTS);
             }
 
             // Load input data
             std::string returnsFile = parser.getFlagValue("returns");
             std::string covarianceFile = parser.getFlagValue("covariance");
 
-            auto returns = FileParser::parseReturns(returnsFile);
-            auto covariance = FileParser::parseCovariance(covarianceFile);
+            // Parse returns with enhanced error handling
+            optimizer::ExpectedReturns returns;
+            try {
+                returns = FileParser::parseReturns(returnsFile);
+                if (returns.empty()) {
+                    std::cerr << "Error: Empty returns data - File '" << returnsFile
+                              << "' contains no valid data" << std::endl;
+                    std::cerr << "Expected: A CSV file with numeric return values, one per line or "
+                                 "comma-separated"
+                              << std::endl;
+                    return static_cast<int>(ExitCode::VALIDATION_ERROR);
+                }
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Error: Failed to load returns data from '" << returnsFile << "'"
+                          << std::endl;
+                std::cerr << "Details: " << e.what() << std::endl;
+                std::cerr << "Hint: Check that the file exists and contains valid numeric data"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
+            }
+
+            // Parse covariance with enhanced error handling
+            optimizer::CovarianceMatrix covariance;
+            try {
+                covariance = FileParser::parseCovariance(covarianceFile);
+                if (covariance.empty()) {
+                    std::cerr << "Error: Empty covariance matrix - File '" << covarianceFile
+                              << "' contains no valid data" << std::endl;
+                    std::cerr << "Expected: A CSV file with an NxN symmetric matrix of covariances"
+                              << std::endl;
+                    return static_cast<int>(ExitCode::VALIDATION_ERROR);
+                }
+            } catch (const std::invalid_argument& e) {
+                std::cerr << "Error: Invalid covariance matrix in file '" << covarianceFile << "'"
+                          << std::endl;
+                std::cerr << "Details: " << e.what() << std::endl;
+                std::cerr << "Hint: The covariance matrix must be square, symmetric, and "
+                             "positive-definite"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Error: Failed to load covariance matrix from '" << covarianceFile
+                          << "'" << std::endl;
+                std::cerr << "Details: " << e.what() << std::endl;
+                std::cerr << "Hint: Check that the file exists and contains a valid NxN matrix"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
+            }
 
             // Validate dimensions
             if (returns.size() != covariance.size()) {
-                throw std::runtime_error("Returns and covariance dimensions do not match");
+                std::cerr << "Error: Dimension mismatch - Returns and covariance dimensions do not "
+                             "match"
+                          << std::endl;
+                std::cerr << "Details: Expected returns has " << returns.size()
+                          << " assets, but covariance matrix is " << covariance.size() << "x"
+                          << covariance.size() << std::endl;
+                std::cerr << "Hint: Both files must describe the same number of assets"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
             }
 
             // Parse optional risk-free rate
@@ -62,8 +127,15 @@ public:
             if (parser.hasFlag("rf-rate")) {
                 try {
                     riskFreeRate = std::stod(parser.getFlagValue("rf-rate"));
-                } catch (const std::exception&) {
-                    throw std::runtime_error("Invalid risk-free rate value");
+                    if (!std::isfinite(riskFreeRate)) {
+                        throw std::invalid_argument("Risk-free rate must be a finite number");
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "Error: Invalid risk-free rate value - '"
+                              << parser.getFlagValue("rf-rate") << "'" << std::endl;
+                    std::cerr << "Details: " << e.what() << std::endl;
+                    std::cerr << "Expected: A numeric value (e.g., 0.02 for 2%)" << std::endl;
+                    return static_cast<int>(ExitCode::INVALID_ARGUMENTS);
                 }
             }
 
@@ -87,6 +159,15 @@ public:
             // Run minimum variance optimization
             auto result = optimizer.minimumVariance();
 
+            // Check if optimization succeeded
+            if (!result.success()) {
+                std::cerr << "Error: Optimization failed" << std::endl;
+                if (!result.message.empty()) {
+                    std::cerr << "Details: " << result.message << std::endl;
+                }
+                return static_cast<int>(ExitCode::COMPUTATION_ERROR);
+            }
+
             // Update Sharpe ratio with custom risk-free rate if provided
             if (riskFreeRate != 0.0) {
                 result.setRiskFreeRate(riskFreeRate);
@@ -99,16 +180,24 @@ public:
                 printResult(result, riskFreeRate);
             } else {
                 // Write to file
-                writeResult(result, outputFile);
-                std::cout << "Results written to: " << outputFile << std::endl;
+                try {
+                    writeResult(result, outputFile);
+                    std::cout << "Results written to: " << outputFile << std::endl;
+                } catch (const std::runtime_error& e) {
+                    std::cerr << "Error: Failed to write output to '" << outputFile << "'"
+                              << std::endl;
+                    std::cerr << "Details: " << e.what() << std::endl;
+                    return static_cast<int>(ExitCode::VALIDATION_ERROR);
+                }
             }
 
-            return 0;
+            return static_cast<int>(ExitCode::SUCCESS);
 
         } catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
+            std::cerr << "Error: Unexpected error occurred" << std::endl;
+            std::cerr << "Details: " << e.what() << std::endl;
             std::cerr << "Use 'orbat mpt --help' for usage information." << std::endl;
-            return 1;
+            return static_cast<int>(ExitCode::INTERNAL_ERROR);
         }
     }
 

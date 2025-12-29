@@ -356,3 +356,26 @@ TEST(CovarianceMatrixTest, LoadFromJSONStringWithLabels) {
     EXPECT_EQ(cov.labels().size(), 2);
     EXPECT_EQ(cov.labels()[0], "Stock A");
 }
+
+// Test positive-definiteness validation
+TEST(CovarianceMatrixTest, ValidateNonPositiveDefinite) {
+    // Matrix with high correlations that is not positive-definite
+    EXPECT_THROW(CovarianceMatrix::fromCSV("data/invalid_non_pd_cov.csv"), std::invalid_argument);
+}
+
+TEST(CovarianceMatrixTest, ValidateZeroDiagonal) {
+    // Matrix with zero diagonal (already tested but included for completeness)
+    EXPECT_THROW(CovarianceMatrix::fromCSV("data/invalid_zero_diagonal_cov.csv"),
+                 std::invalid_argument);
+}
+
+TEST(CovarianceMatrixTest, ValidateEmptyFile) {
+    // Empty file should throw runtime_error
+    EXPECT_THROW(CovarianceMatrix::fromCSV("data/empty_file.csv"), std::runtime_error);
+}
+
+TEST(CovarianceMatrixTest, ValidatePositiveDefiniteMatrix) {
+    // Valid positive-definite matrix should pass
+    CovarianceMatrix cov({{0.04, 0.01, 0.005}, {0.01, 0.0225, 0.008}, {0.005, 0.008, 0.01}});
+    EXPECT_NO_THROW(cov.validate());
+}

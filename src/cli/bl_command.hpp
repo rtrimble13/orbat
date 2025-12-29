@@ -9,6 +9,7 @@
 #include <string>
 
 #include "arg_parser.hpp"
+#include "error_codes.hpp"
 #include "file_parser.hpp"
 
 namespace orbat {
@@ -32,16 +33,26 @@ public:
             // Check for help flag
             if (parser.isHelp()) {
                 printHelp();
-                return 0;
+                return static_cast<int>(ExitCode::SUCCESS);
             }
 
             // Parse required flags
             if (!parser.hasFlag("returns")) {
-                throw std::runtime_error(
-                    "Missing required flag: --returns (market equilibrium weights)");
+                std::cerr << "Error: Missing required input - Market equilibrium weights not "
+                             "provided"
+                          << std::endl;
+                std::cerr << "Usage: Use --returns <file> to specify market weights CSV file"
+                          << std::endl;
+                std::cerr << "Run 'orbat bl --help' for more information." << std::endl;
+                return static_cast<int>(ExitCode::INVALID_ARGUMENTS);
             }
             if (!parser.hasFlag("covariance")) {
-                throw std::runtime_error("Missing required flag: --covariance");
+                std::cerr << "Error: Missing required input - Covariance matrix not provided"
+                          << std::endl;
+                std::cerr << "Usage: Use --covariance <file> to specify covariance matrix CSV file"
+                          << std::endl;
+                std::cerr << "Run 'orbat bl --help' for more information." << std::endl;
+                return static_cast<int>(ExitCode::INVALID_ARGUMENTS);
             }
 
             // Load input data
@@ -49,16 +60,68 @@ public:
             std::string marketWeightsFile = parser.getFlagValue("returns");
             std::string covarianceFile = parser.getFlagValue("covariance");
 
-            // Parse as returns, but interpret as weights (both are vectors)
-            auto marketWeightsData = FileParser::parseReturns(marketWeightsFile);
-            auto covariance = FileParser::parseCovariance(covarianceFile);
+            // Parse market weights with enhanced error handling
+            optimizer::ExpectedReturns marketWeightsData;
+            try {
+                marketWeightsData = FileParser::parseReturns(marketWeightsFile);
+                if (marketWeightsData.empty()) {
+                    std::cerr << "Error: Empty market weights - File '" << marketWeightsFile
+                              << "' contains no valid data" << std::endl;
+                    std::cerr << "Expected: A CSV file with numeric weight values summing to 1.0"
+                              << std::endl;
+                    return static_cast<int>(ExitCode::VALIDATION_ERROR);
+                }
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Error: Failed to load market weights from '" << marketWeightsFile
+                          << "'" << std::endl;
+                std::cerr << "Details: " << e.what() << std::endl;
+                std::cerr << "Hint: Check that the file exists and contains valid numeric data"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
+            }
+
+            // Parse covariance with enhanced error handling
+            optimizer::CovarianceMatrix covariance;
+            try {
+                covariance = FileParser::parseCovariance(covarianceFile);
+                if (covariance.empty()) {
+                    std::cerr << "Error: Empty covariance matrix - File '" << covarianceFile
+                              << "' contains no valid data" << std::endl;
+                    std::cerr << "Expected: A CSV file with an NxN symmetric matrix of covariances"
+                              << std::endl;
+                    return static_cast<int>(ExitCode::VALIDATION_ERROR);
+                }
+            } catch (const std::invalid_argument& e) {
+                std::cerr << "Error: Invalid covariance matrix in file '" << covarianceFile << "'"
+                          << std::endl;
+                std::cerr << "Details: " << e.what() << std::endl;
+                std::cerr << "Hint: The covariance matrix must be square, symmetric, and "
+                             "positive-definite"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Error: Failed to load covariance matrix from '" << covarianceFile
+                          << "'" << std::endl;
+                std::cerr << "Details: " << e.what() << std::endl;
+                std::cerr << "Hint: Check that the file exists and contains a valid NxN matrix"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
+            }
 
             // Extract the underlying vector from ExpectedReturns
             core::Vector marketWeights(marketWeightsData.data());
 
             // Validate dimensions
             if (marketWeights.size() != covariance.size()) {
-                throw std::runtime_error("Market weights and covariance dimensions do not match");
+                std::cerr << "Error: Dimension mismatch - Market weights and covariance dimensions "
+                             "do not match"
+                          << std::endl;
+                std::cerr << "Details: Market weights has " << marketWeights.size()
+                          << " assets, but covariance matrix is " << covariance.size() << "x"
+                          << covariance.size() << std::endl;
+                std::cerr << "Hint: Both files must describe the same number of assets"
+                          << std::endl;
+                return static_cast<int>(ExitCode::VALIDATION_ERROR);
             }
 
             // Parse optional parameters
@@ -80,6 +143,15 @@ public:
             // For now, the optimizer uses only the equilibrium returns derived from market weights.
             auto result = blOptimizer.optimize();
 
+            // Check if optimization succeeded
+            if (!result.success()) {
+                std::cerr << "Error: Optimization failed" << std::endl;
+                if (!result.message.empty()) {
+                    std::cerr << "Details: " << result.message << std::endl;
+                }
+                return static_cast<int>(ExitCode::COMPUTATION_ERROR);
+            }
+
             // Output results
             std::string outputFile = parser.getFlagValue("output", "");
             if (outputFile.empty()) {
@@ -87,16 +159,24 @@ public:
                 printResult(blOptimizer, result);
             } else {
                 // Write to file
-                writeResult(result, outputFile);
-                std::cout << "Results written to: " << outputFile << std::endl;
+                try {
+                    writeResult(result, outputFile);
+                    std::cout << "Results written to: " << outputFile << std::endl;
+                } catch (const std::runtime_error& e) {
+                    std::cerr << "Error: Failed to write output to '" << outputFile << "'"
+                              << std::endl;
+                    std::cerr << "Details: " << e.what() << std::endl;
+                    return static_cast<int>(ExitCode::VALIDATION_ERROR);
+                }
             }
 
-            return 0;
+            return static_cast<int>(ExitCode::SUCCESS);
 
         } catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
+            std::cerr << "Error: Unexpected error occurred" << std::endl;
+            std::cerr << "Details: " << e.what() << std::endl;
             std::cerr << "Use 'orbat bl --help' for usage information." << std::endl;
-            return 1;
+            return static_cast<int>(ExitCode::INTERNAL_ERROR);
         }
     }
 
