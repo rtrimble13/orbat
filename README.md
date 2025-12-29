@@ -37,9 +37,26 @@ orbat/
   - Constraint composition and feasibility validation
   - Consistent with CFA Institute best practices
 
+- **Markowitz Portfolio Optimization**: Classic mean-variance optimization
+  - Minimum variance portfolios
+  - Target return optimization
+  - Risk aversion parameter optimization
+  - Support for portfolio constraints
+
+- **Efficient Frontier**: Generate and export efficient portfolios for analysis
+  - Generate N frontier portfolios with varying risk-return profiles
+  - Export to CSV format (for Python, R, Excel)
+  - Export to JSON format (for web visualization)
+  - Guaranteed convexity and monotonicity properties
+  - Stable across different input parameters
+
 See [Linear Algebra Documentation](docs/linear_algebra.md) for detailed API reference and usage examples.
 
 See [Portfolio Constraints Documentation](docs/constraints.md) for constraint system usage and best practices.
+
+See [Markowitz Optimization Documentation](docs/markowitz.md) for portfolio optimization guide.
+
+See [Efficient Frontier Documentation](docs/efficient_frontier.md) for frontier generation and visualization.
 
 ## Building
 
