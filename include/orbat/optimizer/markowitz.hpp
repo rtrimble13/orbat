@@ -47,7 +47,7 @@ struct MarkowitzResult {
  * - Long-only and box constraints
  *
  * The optimizer solves quadratic programming problems of the form:
- *   minimize:   w'Σw - λμ'w
+ *   minimize:   (1/2)w'Σw - λμ'w
  *   subject to: w'1 = 1 (fully invested)
  *               w ≥ 0 (long-only, optional)
  *               w_min ≤ w ≤ w_max (box constraints, optional)

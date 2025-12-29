@@ -13,7 +13,7 @@ The Markowitz optimizer implements the classic mean-variance portfolio optimizat
 The Markowitz model solves the following optimization problem:
 
 ```
-minimize:   w'Σw - λμ'w
+minimize:   (1/2)w'Σw - λμ'w
 subject to: w'1 = 1 (fully invested)
             w ≥ 0 (long-only, optional)
             w_min ≤ w ≤ w_max (box constraints, optional)
