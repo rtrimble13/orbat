@@ -33,12 +33,12 @@ jobs:
 
           # Check formatting on all files
           FAILED=0
-          FAILED_FILES=""
+          FAILED_FILES=()
 
           for file in $FILES; do
-            if ! clang-format-14 --dry-run --Werror "$file" 2>&1; then
+            if ! clang-format-14 --dry-run --Werror "$file" >/dev/null 2>&1; then
               FAILED=1
-              FAILED_FILES="$FAILED_FILES\n  - $file"
+              FAILED_FILES+=("$file")
             fi
           done
 
@@ -47,7 +47,9 @@ jobs:
             echo "❌ Formatting check failed!"
             echo ""
             echo "The following files need formatting:"
-            echo -e "$FAILED_FILES"
+            for file in "${FAILED_FILES[@]}"; do
+              echo "  - $file"
+            done
             echo ""
             echo "To fix formatting issues, run:"
             echo "  clang-format -i <file>"
