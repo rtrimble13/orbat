@@ -381,16 +381,11 @@ TEST(MarkowitzOptimizerTest, AnalyticalTwoAssetCase) {
 TEST(MarkowitzOptimizerTest, AnalyticalPerfectlyCorrelated) {
     // Two perfectly correlated assets
     // σ1 = 0.2, σ2 = 0.3, ρ = 1.0
-    // This creates a singular covariance matrix, which should fail
+    // This creates a singular covariance matrix, which should be rejected during validation
     ExpectedReturns returns({0.10, 0.10});
-    CovarianceMatrix cov({{0.04, 0.06}, {0.06, 0.09}});
 
-    MarkowitzOptimizer optimizer(returns, cov);
-    auto result = optimizer.minimumVariance();
-
-    // Perfectly correlated assets create a singular covariance matrix
-    // The optimizer should fail gracefully
-    EXPECT_FALSE(result.success());
+    // Covariance matrix construction should throw due to non-positive-definiteness
+    EXPECT_THROW({ CovarianceMatrix cov({{0.04, 0.06}, {0.06, 0.09}}); }, std::invalid_argument);
 }
 
 // Test with constraints

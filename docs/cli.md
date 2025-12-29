@@ -261,8 +261,84 @@ Use 'orbat mpt --help' for usage information.
 
 ## Exit Codes
 
-- `0`: Success
-- `1`: Error (invalid arguments, missing files, optimization failure, etc.)
+The CLI uses standard exit codes for deterministic, machine-readable error reporting suitable for CI/CD and scripting:
+
+| Exit Code | Name | Description | Example Scenarios |
+|-----------|------|-------------|-------------------|
+| `0` | SUCCESS | Operation completed successfully | Valid optimization, help output |
+| `1` | VALIDATION_ERROR | Input validation failed | Missing files, invalid matrix format, non-positive-definite covariance, dimension mismatch, empty data |
+| `2` | COMPUTATION_ERROR | Computation failed | Optimization didn't converge, numerical instability |
+| `3` | INVALID_ARGUMENTS | Invalid command-line arguments | Missing required flags, invalid numeric values, unknown flags |
+| `4` | INTERNAL_ERROR | Unexpected internal error | Unhandled exceptions, system errors |
+
+### Usage in Scripts
+
+The exit codes enable robust error handling in scripts:
+
+```bash
+#!/bin/bash
+
+orbat mpt --returns data/returns.csv --covariance data/cov.csv --output result.json
+
+case $? in
+    0)
+        echo "✓ Optimization successful"
+        ;;
+    1)
+        echo "✗ Input validation failed - check your data files"
+        exit 1
+        ;;
+    2)
+        echo "✗ Computation failed - try different parameters"
+        exit 1
+        ;;
+    3)
+        echo "✗ Invalid arguments - check command syntax"
+        exit 1
+        ;;
+    *)
+        echo "✗ Unexpected error"
+        exit 1
+        ;;
+esac
+```
+
+### Common Validation Errors
+
+#### Non-Positive-Definite Covariance Matrix
+```bash
+$ orbat mpt --returns returns.csv --covariance bad_cov.csv
+Error: Invalid covariance matrix in file 'bad_cov.csv'
+Details: Covariance matrix must be positive-definite (all eigenvalues must be positive). This typically indicates perfectly correlated assets or rank-deficient data. Check for duplicate assets or linear dependencies.
+Hint: The covariance matrix must be square, symmetric, and positive-definite
+Exit code: 1
+```
+
+#### Dimension Mismatch
+```bash
+$ orbat mpt --returns returns_5.csv --covariance cov_3x3.csv
+Error: Dimension mismatch - Returns and covariance dimensions do not match
+Details: Expected returns has 5 assets, but covariance matrix is 3x3
+Hint: Both files must describe the same number of assets
+Exit code: 1
+```
+
+#### Missing Input File
+```bash
+$ orbat mpt --returns missing.csv --covariance cov.csv
+Error: Failed to load returns data from 'missing.csv'
+Details: Cannot open file: missing.csv
+Hint: Check that the file exists and contains valid numeric data
+Exit code: 1
+```
+
+#### Empty Data File
+```bash
+$ orbat mpt --returns empty.csv --covariance cov.csv
+Error: Empty returns data - File 'empty.csv' contains no valid data
+Expected: A CSV file with numeric return values, one per line or comma-separated
+Exit code: 1
+```
 
 ## Scripting
 
