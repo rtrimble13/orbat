@@ -177,7 +177,7 @@ public:
             double risk = std::sqrt(std::max(0.0, variance));
 
             return MarkowitzResult{weights, expectedReturn, risk, true,
-                                    "Minimum variance portfolio computed"};
+                                   "Minimum variance portfolio computed"};
 
         } catch (const std::exception& e) {
             return MarkowitzResult{
@@ -253,7 +253,7 @@ public:
             double risk = std::sqrt(std::max(0.0, variance));
 
             return MarkowitzResult{weights, expectedReturn, risk, true,
-                                    "Mean-variance portfolio computed"};
+                                   "Mean-variance portfolio computed"};
 
         } catch (const std::exception& e) {
             return MarkowitzResult{
@@ -333,7 +333,7 @@ public:
             double risk = std::sqrt(std::max(0.0, variance));
 
             return MarkowitzResult{weights, expectedReturn, risk, true,
-                                    "Target return portfolio computed"};
+                                   "Target return portfolio computed"};
 
         } catch (const std::exception& e) {
             return MarkowitzResult{
@@ -435,7 +435,7 @@ private:
      * @return Optimization result
      */
     MarkowitzResult solveConstrainedQP(const core::Vector& initialWeights,
-                                        double lambda [[maybe_unused]]) const {
+                                       double lambda [[maybe_unused]]) const {
         const size_t n = expectedReturns_.size();
         core::Vector weights = initialWeights;
 
@@ -469,7 +469,7 @@ private:
         double risk = std::sqrt(std::max(0.0, variance));
 
         return MarkowitzResult{weights, expectedReturn, risk, true,
-                                "Constrained portfolio computed"};
+                               "Constrained portfolio computed"};
     }
 
     /**
@@ -480,7 +480,7 @@ private:
      * @return Optimization result
      */
     MarkowitzResult solveConstrainedQPWithTarget(const core::Vector& initialWeights,
-                                                  double targetReturn [[maybe_unused]]) const {
+                                                 double targetReturn [[maybe_unused]]) const {
         // For simplicity, use the same projection method
         // A more sophisticated implementation would handle the return constraint explicitly
         return solveConstrainedQP(initialWeights, 0.0);

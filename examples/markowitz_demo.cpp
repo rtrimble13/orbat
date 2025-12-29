@@ -42,12 +42,9 @@ int main() {
         std::cout << "   Expected Return: " << minVar.expectedReturn * 100 << "%" << std::endl;
         std::cout << "   Risk (Std Dev):  " << minVar.risk * 100 << "%" << std::endl;
         std::cout << "   Portfolio Weights:" << std::endl;
-        std::cout << "     Asset 1 (Bonds):       " << minVar.weights[0] * 100 << "%"
-                  << std::endl;
-        std::cout << "     Asset 2 (Balanced):    " << minVar.weights[1] * 100 << "%"
-                  << std::endl;
-        std::cout << "     Asset 3 (Stocks):      " << minVar.weights[2] * 100 << "%"
-                  << std::endl;
+        std::cout << "     Asset 1 (Bonds):       " << minVar.weights[0] * 100 << "%" << std::endl;
+        std::cout << "     Asset 2 (Balanced):    " << minVar.weights[1] * 100 << "%" << std::endl;
+        std::cout << "     Asset 3 (Stocks):      " << minVar.weights[2] * 100 << "%" << std::endl;
     }
     std::cout << std::endl;
 
@@ -78,8 +75,7 @@ int main() {
         if (result.success()) {
             std::cout << "   " << std::setw(13) << target * 100 << "%" << std::setw(10)
                       << result.expectedReturn * 100 << "%" << std::setw(8) << result.risk * 100
-                      << "%"
-                      << "    " << std::setw(5) << static_cast<int>(result.weights[0] * 100)
+                      << "%" << "    " << std::setw(5) << static_cast<int>(result.weights[0] * 100)
                       << "% / " << std::setw(3) << static_cast<int>(result.weights[1] * 100)
                       << "% / " << std::setw(3) << static_cast<int>(result.weights[2] * 100) << "%"
                       << std::endl;
@@ -120,9 +116,8 @@ int main() {
 
     std::cout << "   Strategy             Return    Risk    Sharpe Ratio*" << std::endl;
     std::cout << "   Equal Weights      " << std::setw(8) << equalReturn * 100 << "%"
-              << std::setw(8) << equalRisk * 100 << "%       "
-              << std::setw(4) << std::setprecision(2) << (equalReturn / equalRisk)
-              << std::endl;
+              << std::setw(8) << equalRisk * 100 << "%       " << std::setw(4)
+              << std::setprecision(2) << (equalReturn / equalRisk) << std::endl;
 
     auto conservative = optimizer.optimize(0.5);
     if (conservative.success()) {
