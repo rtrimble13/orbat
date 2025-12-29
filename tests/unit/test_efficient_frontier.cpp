@@ -390,7 +390,7 @@ TEST(EfficientFrontierTest, ExportedDataMatchesFrontier) {
         if (!result.success()) {
             continue;  // Skip failed portfolios, matching export behavior
         }
-        
+
         std::string line;
         ASSERT_TRUE(std::getline(file, line)) << "Expected more lines in CSV";
 

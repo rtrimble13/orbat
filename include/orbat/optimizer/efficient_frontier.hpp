@@ -44,7 +44,7 @@ inline void exportFrontierToCSV(const std::vector<MarkowitzResult>& frontier,
 
     // Write header
     file << "return,volatility";
-    
+
     // Find first successful portfolio to get number of assets
     size_t numAssets = 0;
     for (const auto& result : frontier) {
@@ -53,7 +53,7 @@ inline void exportFrontierToCSV(const std::vector<MarkowitzResult>& frontier,
             break;
         }
     }
-    
+
     if (numAssets == 0) {
         throw std::invalid_argument("No successful portfolios in frontier");
     }
