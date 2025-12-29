@@ -22,7 +22,7 @@ namespace optimizer {
  *
  * Contains the optimal weights, expected return, and portfolio risk (volatility).
  */
-struct MarkowitizResult {
+struct MarkowitzResult {
     core::Vector weights;   // Optimal portfolio weights
     double expectedReturn;  // Expected portfolio return
     double risk;            // Portfolio risk (standard deviation)
@@ -135,7 +135,7 @@ public:
      *
      * @return Optimization result with optimal weights
      */
-    MarkowitizResult minimumVariance() const {
+    MarkowitzResult minimumVariance() const {
         const size_t n = expectedReturns_.size();
 
         // For minimum variance with fully invested constraint:
@@ -156,7 +156,7 @@ public:
             double denominator = ones.dot(covInvOnes);
 
             if (std::abs(denominator) < core::EPSILON) {
-                return MarkowitizResult{{}, 0.0, 0.0, false, "Singular covariance matrix"};
+                return MarkowitzResult{{}, 0.0, 0.0, false, "Singular covariance matrix"};
             }
 
             // Compute optimal weights
@@ -176,11 +176,11 @@ public:
             double variance = computeVariance(weights);
             double risk = std::sqrt(std::max(0.0, variance));
 
-            return MarkowitizResult{weights, expectedReturn, risk, true,
+            return MarkowitzResult{weights, expectedReturn, risk, true,
                                     "Minimum variance portfolio computed"};
 
         } catch (const std::exception& e) {
-            return MarkowitizResult{
+            return MarkowitzResult{
                 {}, 0.0, 0.0, false, std::string("Optimization failed: ") + e.what()};
         }
     }
@@ -200,7 +200,7 @@ public:
      * @return Optimization result with optimal weights
      * @throws std::invalid_argument if lambda is negative
      */
-    MarkowitizResult optimize(double lambda) const {
+    MarkowitzResult optimize(double lambda) const {
         if (lambda < 0.0) {
             throw std::invalid_argument("Risk aversion parameter must be non-negative");
         }
@@ -231,7 +231,7 @@ public:
             double onesCovInvOnes = ones.dot(covInvOnes);
 
             if (std::abs(onesCovInvOnes) < core::EPSILON) {
-                return MarkowitizResult{{}, 0.0, 0.0, false, "Singular covariance matrix"};
+                return MarkowitzResult{{}, 0.0, 0.0, false, "Singular covariance matrix"};
             }
 
             // Compute γ
@@ -252,11 +252,11 @@ public:
             double variance = computeVariance(weights);
             double risk = std::sqrt(std::max(0.0, variance));
 
-            return MarkowitizResult{weights, expectedReturn, risk, true,
+            return MarkowitzResult{weights, expectedReturn, risk, true,
                                     "Mean-variance portfolio computed"};
 
         } catch (const std::exception& e) {
-            return MarkowitizResult{
+            return MarkowitzResult{
                 {}, 0.0, 0.0, false, std::string("Optimization failed: ") + e.what()};
         }
     }
@@ -274,7 +274,7 @@ public:
      * @param targetReturn Target portfolio return
      * @return Optimization result with optimal weights
      */
-    MarkowitizResult targetReturn(double targetReturn) const {
+    MarkowitzResult targetReturn(double targetReturn) const {
         const size_t n = expectedReturns_.size();
 
         try {
@@ -286,7 +286,7 @@ public:
             double maxReturn = *std::max_element(returnsData.begin(), returnsData.end());
 
             if (targetReturn < minReturn - tolerance_ || targetReturn > maxReturn + tolerance_) {
-                return MarkowitizResult{{}, 0.0, 0.0, false, "Target return is not achievable"};
+                return MarkowitzResult{{}, 0.0, 0.0, false, "Target return is not achievable"};
             }
 
             // For target return with fully invested constraint:
@@ -309,7 +309,7 @@ public:
 
             double det = A * C - B * B;
             if (std::abs(det) < core::EPSILON) {
-                return MarkowitizResult{
+                return MarkowitzResult{
                     {}, 0.0, 0.0, false, "System is singular (returns may be constant)"};
             }
 
@@ -332,11 +332,11 @@ public:
             double variance = computeVariance(weights);
             double risk = std::sqrt(std::max(0.0, variance));
 
-            return MarkowitizResult{weights, expectedReturn, risk, true,
+            return MarkowitzResult{weights, expectedReturn, risk, true,
                                     "Target return portfolio computed"};
 
         } catch (const std::exception& e) {
-            return MarkowitizResult{
+            return MarkowitzResult{
                 {}, 0.0, 0.0, false, std::string("Optimization failed: ") + e.what()};
         }
     }
@@ -349,12 +349,12 @@ public:
      * @param numPoints Number of points on the efficient frontier (default: 50)
      * @return Vector of optimization results representing the efficient frontier
      */
-    std::vector<MarkowitizResult> efficientFrontier(size_t numPoints = 50) const {
+    std::vector<MarkowitzResult> efficientFrontier(size_t numPoints = 50) const {
         if (numPoints < 2) {
             throw std::invalid_argument("Number of points must be at least 2");
         }
 
-        std::vector<MarkowitizResult> frontier;
+        std::vector<MarkowitzResult> frontier;
         frontier.reserve(numPoints);
 
         // Get minimum variance portfolio
@@ -434,7 +434,7 @@ private:
      * @param lambda Risk aversion parameter
      * @return Optimization result
      */
-    MarkowitizResult solveConstrainedQP(const core::Vector& initialWeights,
+    MarkowitzResult solveConstrainedQP(const core::Vector& initialWeights,
                                         double lambda [[maybe_unused]]) const {
         const size_t n = expectedReturns_.size();
         core::Vector weights = initialWeights;
@@ -468,7 +468,7 @@ private:
         double variance = computeVariance(weights);
         double risk = std::sqrt(std::max(0.0, variance));
 
-        return MarkowitizResult{weights, expectedReturn, risk, true,
+        return MarkowitzResult{weights, expectedReturn, risk, true,
                                 "Constrained portfolio computed"};
     }
 
@@ -479,7 +479,7 @@ private:
      * @param targetReturn Target portfolio return
      * @return Optimization result
      */
-    MarkowitizResult solveConstrainedQPWithTarget(const core::Vector& initialWeights,
+    MarkowitzResult solveConstrainedQPWithTarget(const core::Vector& initialWeights,
                                                   double targetReturn [[maybe_unused]]) const {
         // For simplicity, use the same projection method
         // A more sophisticated implementation would handle the return constraint explicitly
