@@ -80,3 +80,13 @@ target_link_libraries(test_markowitz
         GTest::gtest_main
 )
 gtest_discover_tests(test_markowitz)
+
+add_executable(test_efficient_frontier
+    unit/test_efficient_frontier.cpp
+)
+target_link_libraries(test_efficient_frontier
+    PRIVATE
+        orbat
+        GTest::gtest_main
+)
+gtest_discover_tests(test_efficient_frontier)
