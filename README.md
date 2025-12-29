@@ -43,6 +43,13 @@ orbat/
   - Risk aversion parameter optimization
   - Support for portfolio constraints
 
+- **Black-Litterman Model**: Bayesian portfolio optimization combining equilibrium and views
+  - Implied equilibrium returns from market capitalization weights
+  - Flexible view specification (absolute and relative)
+  - View confidence scaling
+  - Smooth blending of equilibrium and investor beliefs
+  - Consistent with academic Black-Litterman formulation
+
 - **Efficient Frontier**: Generate and export efficient portfolios for analysis
   - Generate N frontier portfolios with varying risk-return profiles
   - Export to CSV format (for Python, R, Excel)
@@ -55,6 +62,8 @@ See [Linear Algebra Documentation](docs/linear_algebra.md) for detailed API refe
 See [Portfolio Constraints Documentation](docs/constraints.md) for constraint system usage and best practices.
 
 See [Markowitz Optimization Documentation](docs/markowitz.md) for portfolio optimization guide.
+
+See [Black-Litterman Model Documentation](docs/black_litterman.md) for Bayesian portfolio optimization guide.
 
 See [Efficient Frontier Documentation](docs/efficient_frontier.md) for frontier generation and visualization.
 
