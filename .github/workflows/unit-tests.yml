@@ -8,11 +8,11 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -21,23 +21,23 @@ jobs:
           cmake --version
           echo "g++ version:"
           g++ --version
-      
+
       - name: Configure CMake
         run: |
           mkdir -p build
           cd build
           cmake -DBUILD_TESTS=ON ..
-      
+
       - name: Build project
         run: |
           cd build
           cmake --build . --config Release
-      
+
       - name: Run unit tests
         run: |
           cd build
           ctest --output-on-failure --verbose
-      
+
       - name: Display test summary
         if: always()
         run: |
