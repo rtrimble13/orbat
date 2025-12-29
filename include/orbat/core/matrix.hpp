@@ -1,5 +1,6 @@
 #pragma once
 
+#include "orbat/core/constants.hpp"
 #include "orbat/core/vector.hpp"
 
 #include <algorithm>
@@ -372,7 +373,7 @@ public:
      * @throws std::invalid_argument if scalar is zero
      */
     Matrix operator/(double scalar) const {
-        if (std::abs(scalar) < 1e-15) {
+        if (std::abs(scalar) < EPSILON) {
             throw std::invalid_argument("Division by zero");
         }
 
@@ -468,7 +469,7 @@ public:
                 sum += (*this)(i, j) * x[j];
             }
 
-            if (std::abs((*this)(i, i)) < 1e-15) {
+            if (std::abs((*this)(i, i)) < EPSILON) {
                 throw std::runtime_error("Matrix is singular (zero diagonal element)");
             }
 
@@ -502,7 +503,7 @@ public:
                 sum += (*this)(i, j) * x[j];
             }
 
-            if (std::abs((*this)(i, i)) < 1e-15) {
+            if (std::abs((*this)(i, i)) < EPSILON) {
                 throw std::runtime_error("Matrix is singular (zero diagonal element)");
             }
 

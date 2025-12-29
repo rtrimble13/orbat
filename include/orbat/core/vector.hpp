@@ -1,5 +1,7 @@
 #pragma once
 
+#include "orbat/core/constants.hpp"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -218,7 +220,7 @@ public:
      * @throws std::invalid_argument if scalar is zero
      */
     Vector operator/(double scalar) const {
-        if (std::abs(scalar) < 1e-15) {
+        if (std::abs(scalar) < EPSILON) {
             throw std::invalid_argument("Division by zero");
         }
 
@@ -282,7 +284,7 @@ public:
      * @throws std::invalid_argument if scalar is zero
      */
     Vector& operator/=(double scalar) {
-        if (std::abs(scalar) < 1e-15) {
+        if (std::abs(scalar) < EPSILON) {
             throw std::invalid_argument("Division by zero");
         }
 
