@@ -128,7 +128,7 @@ public:
     /**
      * @brief Compute the minimum variance portfolio.
      *
-     * Solves: minimize w'Σw
+     * Solves: minimize (1/2)w'Σw
      *         subject to: w'1 = 1 and any additional constraints
      *
      * This is the leftmost point on the efficient frontier.
@@ -188,7 +188,7 @@ public:
     /**
      * @brief Optimize portfolio with risk aversion parameter.
      *
-     * Solves: minimize w'Σw - λμ'w
+     * Solves: minimize (1/2)w'Σw - λμ'w
      *         subject to: w'1 = 1 and any additional constraints
      *
      * The risk aversion parameter λ controls the trade-off between risk and return:
@@ -264,7 +264,7 @@ public:
     /**
      * @brief Optimize portfolio with target return constraint.
      *
-     * Solves: minimize w'Σw
+     * Solves: minimize (1/2)w'Σw
      *         subject to: μ'w = targetReturn
      *                     w'1 = 1
      *                     and any additional constraints
