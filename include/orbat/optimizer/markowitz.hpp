@@ -8,8 +8,10 @@
 #include "orbat/optimizer/expected_returns.hpp"
 
 #include <cmath>
+#include <iomanip>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -20,12 +22,15 @@ namespace optimizer {
 /**
  * @brief Result of a Markowitz portfolio optimization.
  *
- * Contains the optimal weights, expected return, and portfolio risk (volatility).
+ * Contains the optimal weights, expected return, portfolio risk (volatility),
+ * and Sharpe ratio. This structure provides a standardized output format
+ * for all optimization methods, with support for serialization to JSON and CSV.
  */
 struct MarkowitzResult {
     core::Vector weights;   // Optimal portfolio weights
     double expectedReturn;  // Expected portfolio return
-    double risk;            // Portfolio risk (standard deviation)
+    double risk;            // Portfolio risk (standard deviation/volatility)
+    double sharpeRatio;     // Sharpe ratio (expectedReturn - riskFreeRate) / risk
     bool converged;         // Whether optimization converged
     std::string message;    // Status or error message
 
@@ -34,6 +39,201 @@ struct MarkowitzResult {
      * @return true if converged, false otherwise
      */
     bool success() const { return converged; }
+
+    /**
+     * @brief Calculate Sharpe ratio with a custom risk-free rate.
+     *
+     * Computes the risk-adjusted return as (expectedReturn - riskFreeRate) / risk.
+     * The default Sharpe ratio in the struct assumes a risk-free rate of 0.
+     *
+     * @param riskFreeRate The risk-free rate (default: 0.0)
+     * @return Sharpe ratio adjusted for the given risk-free rate
+     */
+    double calculateSharpeRatio(double riskFreeRate = 0.0) const {
+        if (risk <= core::EPSILON) {
+            return 0.0;
+        }
+        return (expectedReturn - riskFreeRate) / risk;
+    }
+
+    /**
+     * @brief Update the Sharpe ratio with a custom risk-free rate.
+     *
+     * Modifies the sharpeRatio field to reflect a different risk-free rate.
+     * Useful when you want to store results with a non-zero risk-free rate.
+     *
+     * @param riskFreeRate The risk-free rate to use
+     */
+    void setRiskFreeRate(double riskFreeRate) { sharpeRatio = calculateSharpeRatio(riskFreeRate); }
+
+    /**
+     * @brief Serialize result to JSON string.
+     *
+     * Produces a JSON representation of the optimization result.
+     *
+     * Example output:
+     * {
+     *   "converged": true,
+     *   "message": "Optimization successful",
+     *   "expectedReturn": 0.12,
+     *   "risk": 0.15,
+     *   "sharpeRatio": 0.8,
+     *   "weights": [0.3, 0.5, 0.2]
+     * }
+     *
+     * @return JSON string representation
+     */
+    std::string toJSON() const {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(8);
+        oss << "{\n";
+        oss << "  \"converged\": " << (converged ? "true" : "false") << ",\n";
+        oss << "  \"message\": \"" << message << "\",\n";
+        oss << "  \"expectedReturn\": " << expectedReturn << ",\n";
+        oss << "  \"risk\": " << risk << ",\n";
+        oss << "  \"sharpeRatio\": " << sharpeRatio << ",\n";
+        oss << "  \"weights\": [";
+        for (size_t i = 0; i < weights.size(); ++i) {
+            if (i > 0) {
+                oss << ", ";
+            }
+            oss << weights[i];
+        }
+        oss << "]\n";
+        oss << "}";
+        return oss.str();
+    }
+
+    /**
+     * @brief Serialize result to CSV string.
+     *
+     * Produces a CSV representation with a header and data row.
+     *
+     * Format: converged,message,expectedReturn,risk,sharpeRatio,weight_0,weight_1,...
+     *
+     * @param includeHeader Whether to include the header row (default: true)
+     * @return CSV string representation
+     */
+    std::string toCSV(bool includeHeader = true) const {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(8);
+
+        // Header
+        if (includeHeader) {
+            oss << "converged,message,expectedReturn,risk,sharpeRatio";
+            for (size_t i = 0; i < weights.size(); ++i) {
+                oss << ",weight_" << i;
+            }
+            oss << "\n";
+        }
+
+        // Data row
+        oss << (converged ? "true" : "false") << ",";
+        oss << "\"" << message << "\",";
+        oss << expectedReturn << ",";
+        oss << risk << ",";
+        oss << sharpeRatio;
+        for (size_t i = 0; i < weights.size(); ++i) {
+            oss << "," << weights[i];
+        }
+
+        return oss.str();
+    }
+
+    /**
+     * @brief Deserialize result from JSON string.
+     *
+     * Parses a JSON string to reconstruct a MarkowitzResult.
+     * This is a simple parser for the specific format produced by toJSON().
+     *
+     * @param json JSON string representation
+     * @return Deserialized MarkowitzResult
+     * @throws std::runtime_error if JSON is malformed
+     */
+    static MarkowitzResult fromJSON(const std::string& json) {
+        MarkowitzResult result;
+
+        // Simple JSON parser for our specific format
+        auto findValue = [&json](const std::string& key) -> std::string {
+            std::string searchKey = "\"" + key + "\":";
+            size_t pos = json.find(searchKey);
+            if (pos == std::string::npos) {
+                throw std::runtime_error("Key not found: " + key);
+            }
+            pos += searchKey.length();
+
+            // Skip whitespace
+            while (pos < json.length() && std::isspace(json[pos])) {
+                pos++;
+            }
+
+            size_t end = pos;
+            if (json[pos] == '"') {
+                // String value
+                pos++;
+                end = json.find('"', pos);
+                if (end == std::string::npos) {
+                    throw std::runtime_error("Malformed string value for key: " + key);
+                }
+                return json.substr(pos, end - pos);
+            } else if (json[pos] == '[') {
+                // Array value - return everything including brackets
+                int depth = 0;
+                while (end < json.length()) {
+                    if (json[end] == '[') {
+                        depth++;
+                    } else if (json[end] == ']') {
+                        depth--;
+                        if (depth == 0) {
+                            end++;
+                            break;
+                        }
+                    }
+                    end++;
+                }
+                return json.substr(pos, end - pos);
+            } else if (json.substr(pos, 4) == "true") {
+                return "true";
+            } else if (json.substr(pos, 5) == "false") {
+                return "false";
+            } else {
+                // Numeric value
+                while (end < json.length() &&
+                       (std::isdigit(json[end]) || json[end] == '.' || json[end] == '-' ||
+                        json[end] == 'e' || json[end] == 'E' || json[end] == '+')) {
+                    end++;
+                }
+                return json.substr(pos, end - pos);
+            }
+        };
+
+        // Parse fields
+        result.converged = (findValue("converged") == "true");
+        result.message = findValue("message");
+        result.expectedReturn = std::stod(findValue("expectedReturn"));
+        result.risk = std::stod(findValue("risk"));
+        result.sharpeRatio = std::stod(findValue("sharpeRatio"));
+
+        // Parse weights array
+        std::string weightsStr = findValue("weights");
+        weightsStr = weightsStr.substr(1, weightsStr.length() - 2);  // Remove [ ]
+
+        std::vector<double> weightsVec;
+        std::istringstream iss(weightsStr);
+        std::string token;
+        while (std::getline(iss, token, ',')) {
+            // Trim whitespace
+            token.erase(0, token.find_first_not_of(" \t\n\r"));
+            token.erase(token.find_last_not_of(" \t\n\r") + 1);
+            if (!token.empty()) {
+                weightsVec.push_back(std::stod(token));
+            }
+        }
+
+        result.weights = core::Vector(weightsVec);
+
+        return result;
+    }
 };
 
 /**
@@ -156,7 +356,7 @@ public:
             double denominator = ones.dot(covInvOnes);
 
             if (std::abs(denominator) < core::EPSILON) {
-                return MarkowitzResult{{}, 0.0, 0.0, false, "Singular covariance matrix"};
+                return MarkowitzResult{{}, 0.0, 0.0, 0.0, false, "Singular covariance matrix"};
             }
 
             // Compute optimal weights
@@ -175,13 +375,15 @@ public:
             double expectedReturn = expectedReturns_.data().dot(weights);
             double variance = computeVariance(weights);
             double risk = std::sqrt(std::max(0.0, variance));
+            double sharpeRatio = (risk > core::EPSILON) ? (expectedReturn / risk) : 0.0;
 
-            return MarkowitzResult{weights, expectedReturn, risk, true,
-                                   "Minimum variance portfolio computed"};
+            return MarkowitzResult{weights, expectedReturn,
+                                   risk,    sharpeRatio,
+                                   true,    "Minimum variance portfolio computed"};
 
         } catch (const std::exception& e) {
-            return MarkowitzResult{
-                {}, 0.0, 0.0, false, std::string("Optimization failed: ") + e.what()};
+            return MarkowitzResult{{},  0.0,   0.0,
+                                   0.0, false, std::string("Optimization failed: ") + e.what()};
         }
     }
 
@@ -231,7 +433,7 @@ public:
             double onesCovInvOnes = ones.dot(covInvOnes);
 
             if (std::abs(onesCovInvOnes) < core::EPSILON) {
-                return MarkowitzResult{{}, 0.0, 0.0, false, "Singular covariance matrix"};
+                return MarkowitzResult{{}, 0.0, 0.0, 0.0, false, "Singular covariance matrix"};
             }
 
             // Compute γ
@@ -251,13 +453,14 @@ public:
             double expectedReturn = mu.dot(weights);
             double variance = computeVariance(weights);
             double risk = std::sqrt(std::max(0.0, variance));
+            double sharpeRatio = (risk > core::EPSILON) ? (expectedReturn / risk) : 0.0;
 
-            return MarkowitzResult{weights, expectedReturn, risk, true,
-                                   "Mean-variance portfolio computed"};
+            return MarkowitzResult{weights,     expectedReturn, risk,
+                                   sharpeRatio, true,           "Mean-variance portfolio computed"};
 
         } catch (const std::exception& e) {
-            return MarkowitzResult{
-                {}, 0.0, 0.0, false, std::string("Optimization failed: ") + e.what()};
+            return MarkowitzResult{{},  0.0,   0.0,
+                                   0.0, false, std::string("Optimization failed: ") + e.what()};
         }
     }
 
@@ -286,7 +489,7 @@ public:
             double maxReturn = *std::max_element(returnsData.begin(), returnsData.end());
 
             if (targetReturn < minReturn - tolerance_ || targetReturn > maxReturn + tolerance_) {
-                return MarkowitzResult{{}, 0.0, 0.0, false, "Target return is not achievable"};
+                return MarkowitzResult{{}, 0.0, 0.0, 0.0, false, "Target return is not achievable"};
             }
 
             // For target return with fully invested constraint:
@@ -309,8 +512,8 @@ public:
 
             double det = A * C - B * B;
             if (std::abs(det) < core::EPSILON) {
-                return MarkowitzResult{
-                    {}, 0.0, 0.0, false, "System is singular (returns may be constant)"};
+                return MarkowitzResult{{},  0.0,   0.0,
+                                       0.0, false, "System is singular (returns may be constant)"};
             }
 
             // Solve for a and b
@@ -331,13 +534,14 @@ public:
             double expectedReturn = mu.dot(weights);
             double variance = computeVariance(weights);
             double risk = std::sqrt(std::max(0.0, variance));
+            double sharpeRatio = (risk > core::EPSILON) ? (expectedReturn / risk) : 0.0;
 
-            return MarkowitzResult{weights, expectedReturn, risk, true,
-                                   "Target return portfolio computed"};
+            return MarkowitzResult{weights,     expectedReturn, risk,
+                                   sharpeRatio, true,           "Target return portfolio computed"};
 
         } catch (const std::exception& e) {
-            return MarkowitzResult{
-                {}, 0.0, 0.0, false, std::string("Optimization failed: ") + e.what()};
+            return MarkowitzResult{{},  0.0,   0.0,
+                                   0.0, false, std::string("Optimization failed: ") + e.what()};
         }
     }
 
@@ -467,9 +671,10 @@ private:
         double expectedReturn = expectedReturns_.data().dot(weights);
         double variance = computeVariance(weights);
         double risk = std::sqrt(std::max(0.0, variance));
+        double sharpeRatio = (risk > core::EPSILON) ? (expectedReturn / risk) : 0.0;
 
-        return MarkowitzResult{weights, expectedReturn, risk, true,
-                               "Constrained portfolio computed"};
+        return MarkowitzResult{weights,     expectedReturn, risk,
+                               sharpeRatio, true,           "Constrained portfolio computed"};
     }
 
     /**

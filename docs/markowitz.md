@@ -275,9 +275,121 @@ The portfolio risk (volatility) is:
 σ_p = sqrt(w'Σw)
 ```
 
+### Sharpe Ratio
+
+The Sharpe ratio measures risk-adjusted return. By default, it assumes a risk-free rate of 0:
+```
+Sharpe = E[R_p] / σ_p
+```
+
+All optimization results automatically include the computed Sharpe ratio for easy comparison of portfolios.
+
+#### Custom Risk-Free Rate
+
+You can calculate or update the Sharpe ratio with a custom risk-free rate:
+
+```cpp
+auto result = optimizer.minimumVariance();
+
+// Default Sharpe ratio (rf = 0)
+std::cout << "Sharpe (rf=0%): " << result.sharpeRatio << std::endl;
+
+// Calculate with 2% risk-free rate without modifying result
+double sharpeWith2Pct = result.calculateSharpeRatio(0.02);
+std::cout << "Sharpe (rf=2%): " << sharpeWith2Pct << std::endl;
+
+// Update the stored Sharpe ratio to use 3% risk-free rate
+result.setRiskFreeRate(0.03);
+std::cout << "Updated Sharpe (rf=3%): " << result.sharpeRatio << std::endl;
+```
+
+The Sharpe ratio with a risk-free rate is calculated as:
+```
+Sharpe = (E[R_p] - r_f) / σ_p
+```
+
+where `r_f` is the risk-free rate.
+
 ### Success Flag
 
 Always check `result.success()` before using the results. If false, check `result.message` for details.
+
+## Serialization
+
+The optimization results can be easily serialized for storage, logging, or downstream consumption.
+
+### JSON Serialization
+
+Export results to JSON format:
+
+```cpp
+auto result = optimizer.minimumVariance();
+
+// Serialize to JSON string
+std::string json = result.toJSON();
+std::cout << json << std::endl;
+
+// Output:
+// {
+//   "converged": true,
+//   "message": "Minimum variance portfolio computed",
+//   "expectedReturn": 0.12,
+//   "risk": 0.15,
+//   "sharpeRatio": 0.8,
+//   "weights": [0.3, 0.5, 0.2]
+// }
+
+// Deserialize from JSON
+MarkowitzResult restored = MarkowitzResult::fromJSON(json);
+```
+
+### CSV Serialization
+
+Export results to CSV format:
+
+```cpp
+auto result = optimizer.minimumVariance();
+
+// Serialize to CSV with header
+std::string csv = result.toCSV(true);
+std::cout << csv << std::endl;
+
+// Output:
+// converged,message,expectedReturn,risk,sharpeRatio,weight_0,weight_1,weight_2
+// true,"Minimum variance portfolio computed",0.12,0.15,0.8,0.3,0.5,0.2
+
+// Without header (for appending to existing CSV)
+std::string csvData = result.toCSV(false);
+```
+
+### Use Cases
+
+Serialization enables:
+
+- **Logging**: Save optimization results for audit trails
+- **Persistence**: Store portfolios in databases or files
+- **API Integration**: Send results to web services or dashboards
+- **Batch Processing**: Collect and analyze multiple optimization runs
+- **Reproducibility**: Share exact portfolio specifications
+
+Example workflow:
+
+```cpp
+// Run optimization
+auto result = optimizer.optimize(lambda);
+
+// Save to file
+std::ofstream file("portfolio.json");
+file << result.toJSON();
+file.close();
+
+// Later, load from file
+std::ifstream input("portfolio.json");
+std::string json((std::istreambuf_iterator<char>(input)),
+                 std::istreambuf_iterator<char>());
+MarkowitzResult loaded = MarkowitzResult::fromJSON(json);
+```
+
 
 ## Best Practices
 

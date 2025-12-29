@@ -42,6 +42,8 @@ orbat/
   - Target return optimization
   - Risk aversion parameter optimization
   - Support for portfolio constraints
+  - Standardized output with Sharpe ratio
+  - JSON and CSV serialization for results
 
 - **Black-Litterman Model**: Bayesian portfolio optimization combining equilibrium and views
   - Implied equilibrium returns from market capitalization weights
