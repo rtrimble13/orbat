@@ -48,3 +48,12 @@ target_link_libraries(efficient_frontier_demo
     PRIVATE
         orbat
 )
+
+# Black-Litterman optimizer demo
+add_executable(black_litterman_demo
+    black_litterman_demo.cpp
+)
+target_link_libraries(black_litterman_demo
+    PRIVATE
+        orbat
+)
