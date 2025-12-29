@@ -90,3 +90,13 @@ target_link_libraries(test_efficient_frontier
         GTest::gtest_main
 )
 gtest_discover_tests(test_efficient_frontier)
+
+add_executable(test_black_litterman
+    unit/test_black_litterman.cpp
+)
+target_link_libraries(test_black_litterman
+    PRIVATE
+        orbat
+        GTest::gtest_main
+)
+gtest_discover_tests(test_black_litterman)
