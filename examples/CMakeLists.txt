@@ -30,3 +30,12 @@ target_link_libraries(constraints_demo
     PRIVATE
         orbat
 )
+
+# Markowitz optimizer demo
+add_executable(markowitz_demo
+    markowitz_demo.cpp
+)
+target_link_libraries(markowitz_demo
+    PRIVATE
+        orbat
+)
