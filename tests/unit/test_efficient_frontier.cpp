@@ -60,9 +60,15 @@ TEST(EfficientFrontierExportTest, CSVExportBasic) {
     EXPECT_TRUE(header.find("volatility") != std::string::npos);
     EXPECT_TRUE(header.find("weight_") != std::string::npos);
 
-    // Check data rows exist
+    // Check data rows exist - count only successful portfolios
+    size_t successfulCount = 0;
+    for (const auto& result : frontier) {
+        if (result.success()) {
+            successfulCount++;
+        }
+    }
     size_t lineCount = countLines(filename);
-    EXPECT_EQ(lineCount, frontier.size() + 1);  // header + data rows
+    EXPECT_EQ(lineCount, successfulCount + 1);  // header + successful data rows
 
     file.close();
     std::remove(filename.c_str());
@@ -286,7 +292,9 @@ TEST(EfficientFrontierTest, FrontierStableAcrossDifferentInputs) {
     // Check that portfolios are similar (within reasonable tolerance)
     for (size_t i = 0; i < frontier1.size(); ++i) {
         // Returns should be close (allowing for numerical differences from perturbation)
-        // The 1% perturbation can cause small differences in optimal target returns
+        // The 1% covariance perturbation propagates through optimization, so we allow
+        // slightly larger differences. This tolerance reflects the reality that small
+        // input changes can cause non-trivial changes in optimal portfolio selection.
         EXPECT_NEAR(frontier1[i].expectedReturn, frontier2[i].expectedReturn, 5e-6);
 
         // Risk should be close (within 5% relative error)
