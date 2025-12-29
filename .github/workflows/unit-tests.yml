@@ -1,0 +1,50 @@
+name: Unit Tests
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ build-essential
+          echo "CMake version:"
+          cmake --version
+          echo "g++ version:"
+          g++ --version
+
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DBUILD_TESTS=ON ..
+
+      - name: Build project
+        run: |
+          cd build
+          cmake --build . --config Release
+
+      - name: Run unit tests
+        run: |
+          cd build
+          ctest --output-on-failure --verbose
+
+      - name: Display test summary
+        if: always()
+        run: |
+          cd build
+          if [ -f Testing/Temporary/LastTest.log ]; then
+            echo "Test execution log:"
+            cat Testing/Temporary/LastTest.log
+          fi

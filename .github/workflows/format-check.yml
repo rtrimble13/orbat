@@ -1,0 +1,66 @@
+name: Format Check
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-14
+
+      - name: Run clang-format check
+        run: |
+          echo "Checking C++ code formatting..."
+
+          # Find all C++ files in the specified directories
+          FILES=$(find src include tests examples -type f \
+            \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) 2>/dev/null || true)
+
+          if [ -z "$FILES" ]; then
+            echo "No C++ files found to check."
+            exit 0
+          fi
+
+          # Check formatting on all files
+          FAILED=0
+          FAILED_FILES=()
+
+          for file in $FILES; do
+            if ! clang-format-14 --dry-run --Werror "$file" >/dev/null 2>&1; then
+              FAILED=1
+              FAILED_FILES+=("$file")
+            fi
+          done
+
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "❌ Formatting check failed!"
+            echo ""
+            echo "The following files need formatting:"
+            for file in "${FAILED_FILES[@]}"; do
+              echo "  - $file"
+            done
+            echo ""
+            echo "To fix formatting issues, run:"
+            echo "  clang-format -i <file>"
+            echo ""
+            echo "Or to format all files:"
+            echo "  find src include tests examples -type f \\"
+            echo "    \\( -name \"*.cpp\" -o -name \"*.hpp\" -o -name \"*.h\" \\) \\"
+            echo "    -exec clang-format -i {} \\;"
+            exit 1
+          fi
+
+          echo "✅ All files are properly formatted!"
