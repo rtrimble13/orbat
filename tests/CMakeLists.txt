@@ -100,3 +100,13 @@ target_link_libraries(test_black_litterman
         GTest::gtest_main
 )
 gtest_discover_tests(test_black_litterman)
+
+add_executable(test_optimization_result
+    unit/test_optimization_result.cpp
+)
+target_link_libraries(test_optimization_result
+    PRIVATE
+        orbat
+        GTest::gtest_main
+)
+gtest_discover_tests(test_optimization_result)
