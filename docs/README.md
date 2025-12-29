@@ -12,6 +12,13 @@ This directory contains documentation for the orbat project.
   - Code organization guidelines
   - Best practices
 
+### Feature Documentation
+
+- **[linear_algebra.md](linear_algebra.md)** - Linear algebra primitives (Vector and Matrix classes)
+- **[constraints.md](constraints.md)** - Portfolio constraint system
+- **[markowitz.md](markowitz.md)** - Markowitz portfolio optimization
+- **[efficient_frontier.md](efficient_frontier.md)** - Efficient frontier generation and export
+
 ### Additional Documentation
 
 As the project develops, this directory will include:

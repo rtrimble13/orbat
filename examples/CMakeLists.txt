@@ -39,3 +39,12 @@ target_link_libraries(markowitz_demo
     PRIVATE
         orbat
 )
+
+# Efficient frontier demo
+add_executable(efficient_frontier_demo
+    efficient_frontier_demo.cpp
+)
+target_link_libraries(efficient_frontier_demo
+    PRIVATE
+        orbat
+)
